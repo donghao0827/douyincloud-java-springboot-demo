@@ -29,7 +29,7 @@ PORT=8000 java -jar target/douyincloud-demo-0.0.1-SNAPSHOT.jar
 - 用量：<http://127.0.0.1:8000/api/usage>
 - 健康：<http://127.0.0.1:8000/api/health>
 
-如果本机 8000 被占用，用 `PORT=8001` 启动；小程序 [config.js](../卡噗办公室/config.js) 的 `API_BASE` 要跟着改。
+如果本机 8000 被占用，用 `PORT=8001` 启动；小程序 小程序端的 `卡噗办公室/config.js` 的 `API_BASE` 要跟着改。
 
 本地模拟一局：
 
@@ -82,6 +82,6 @@ curl -X POST http://127.0.0.1:8000/live_data_callback \
 ## 已知边界
 
 - **常驻内容工坊 agent 未移植**：它是在本地写 `workspace/artifacts` 的开发期工具，不属于直播运行链路；需要的话可以再加一个定时任务。
-- **`/screen.jpg` 浏览器截图服务未移植**：抖音云 Java 容器里没有 Puppeteer；卡片端对小游戏已做原生 Canvas 兜底。小程序 [config.js](../卡噗办公室/config.js) 的 `SCREEN_BASE` 默认留空，头像/广告不会走截图预览；要恢复就配一个独立的浏览器渲染服务。
+- **`/screen.jpg` 浏览器截图服务未移植**：抖音云 Java 容器里没有 Puppeteer；卡片端对小游戏已做原生 Canvas 兜底。小程序 小程序端的 `卡噗办公室/config.js` 的 `SCREEN_BASE` 默认留空，头像/广告不会走截图预览；要恢复就配一个独立的浏览器渲染服务。
 - **数据是容器本地文件**：`data/usage.jsonl`、`data/payroll.jsonl` 在云上默认是临时的；要跨重启累计需要挂载持久化存储或接数据库。
 - **网络**：抖音云回调走内网专线域名；本地开发无法验证 `/start_game`，但 `/live_data_callback` 可以用上面的 curl 模拟。

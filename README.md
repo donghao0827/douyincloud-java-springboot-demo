@@ -9,6 +9,7 @@
 - 四层 agent 的核心三层：`router` 分诊、`judge` 判官、`task` 点单；游戏点单直接走预置，不再让模型现写。
 - 真实 DeepSeek 调用：`deepseek-flash`、关闭思考、超时/重试/降级；`AI_PAUSED` 总开关。
 - 真实 token 台账：`data/usage.jsonl`，按 session/today/allTime/agent 拆分；工资按月底薪 + 礼物 − 查岗 − 模型自费计算。
+- 常驻内容工坊 agent：朝九晚六、真实写 `workspace/` 文件、`STATE.json` / `journal`，云端默认关闭，可控制台「立即干一步」。
 - REST/SSE：`/api/state`、`/api/events`、`/api/action`、`/api/control`、`/api/usage`、`/api/usage/balance`、`/api/ai/pause`、`/api/health`。
 - 控制接口可选 `API_TOKEN` 保护，防止公网任意触发互动烧 token。
 
@@ -55,6 +56,11 @@ curl -X POST http://127.0.0.1:8000/live_data_callback \
 | `AI_PAUSED` | `true` 时所有模型调用直接跳过 |
 | `API_TOKEN` | 设置后 `/api/action`、`/api/control`、`/api/ai/pause` 需要 `X-Kapu-Token` 请求头 |
 | `DATA_DIR` | 台账/工资文件目录，默认 `data` |
+| `ENABLE_BACKGROUND_AGENT` | 常驻工坊自动开工，默认 false；云端建议关闭 |
+| `AGENT_WORK_START` / `AGENT_WORK_END` | 工坊上下班时间，默认 09:00 / 18:00 |
+| `AGENT_WORK_DAYS` | ISO 星期，默认 1..7 |
+| `AGENT_TICK_SECONDS` | 工坊步进间隔，下限 60 秒 |
+| `AGENT_WORKSPACE` | 工坊项目空间，默认 `workspace` |
 
 ## 抖音云部署
 
@@ -81,7 +87,6 @@ curl -X POST http://127.0.0.1:8000/live_data_callback \
 
 ## 已知边界
 
-- **常驻内容工坊 agent 未移植**：它是在本地写 `workspace/artifacts` 的开发期工具，不属于直播运行链路；需要的话可以再加一个定时任务。
 - **`/screen.jpg` 浏览器截图服务未移植**：抖音云 Java 容器里没有 Puppeteer；卡片端对小游戏已做原生 Canvas 兜底。小程序 小程序端的 `卡噗办公室/config.js` 的 `SCREEN_BASE` 默认留空，头像/广告不会走截图预览；要恢复就配一个独立的浏览器渲染服务。
 - **数据是容器本地文件**：`data/usage.jsonl`、`data/payroll.jsonl` 在云上默认是临时的；要跨重启累计需要挂载持久化存储或接数据库。
 - **网络**：抖音云回调走内网专线域名；本地开发无法验证 `/start_game`，但 `/live_data_callback` 可以用上面的 curl 模拟。

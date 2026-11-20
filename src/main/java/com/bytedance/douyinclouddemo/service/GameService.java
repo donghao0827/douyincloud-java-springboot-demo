@@ -44,13 +44,16 @@ public class GameService {
     private final UsageLedgerService ledger;
     private final AssetService assets;
     private final DeepSeekService deepSeek;
+    private final BackgroundAgentService background;
     private GameState state;
 
-    public GameService(PayrollService payroll, UsageLedgerService ledger, AssetService assets, DeepSeekService deepSeek) {
+    public GameService(PayrollService payroll, UsageLedgerService ledger, AssetService assets,
+                       DeepSeekService deepSeek, BackgroundAgentService background) {
         this.payroll = payroll;
         this.ledger = ledger;
         this.assets = assets;
         this.deepSeek = deepSeek;
+        this.background = background;
     }
 
     @PostConstruct
@@ -572,6 +575,7 @@ public class GameService {
         ai.put("keyFingerprint", config.get("keyFingerprint"));
         ai.put("model", config.get("model"));
         ai.put("thinking", config.get("thinking"));
+        ai.put("background", background.status());
         map.put("ai", ai);
         map.put("currentGame", state.getCurrentGame());
         map.put("lastResult", state.getLastResult());

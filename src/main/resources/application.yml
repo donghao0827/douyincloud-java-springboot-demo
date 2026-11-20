@@ -13,6 +13,12 @@ app:
   data-dir: ${DATA_DIR:data}
   # 生产环境务必设置；设置后 /api/action、/api/control、/api/ai/pause 需要 X-Kapu-Token 请求头
   api-token: ${API_TOKEN:}
+  background-enabled: ${ENABLE_BACKGROUND_AGENT:false}
+  work-start: ${AGENT_WORK_START:09:00}
+  work-end: ${AGENT_WORK_END:18:00}
+  work-days: ${AGENT_WORK_DAYS:1,2,3,4,5,6,7}
+  tick-seconds: ${AGENT_TICK_SECONDS:300}
+  workspace: ${AGENT_WORKSPACE:workspace}
 
 logging:
   level:

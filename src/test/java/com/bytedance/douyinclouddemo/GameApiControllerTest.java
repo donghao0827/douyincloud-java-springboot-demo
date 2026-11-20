@@ -13,7 +13,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = {"app.ai-paused=true", "app.data-dir=target/test-data-api", "app.api-token=test-token"})
+        properties = {"app.ai-paused=true", "app.data-dir=target/test-data-api", "app.workspace=target/test-workspace-api", "app.api-token=test-token"})
 @AutoConfigureMockMvc
 class GameApiControllerTest {
     @Autowired

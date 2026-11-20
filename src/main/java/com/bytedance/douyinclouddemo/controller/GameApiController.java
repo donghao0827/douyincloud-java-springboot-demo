@@ -26,10 +26,11 @@ public class GameApiController {
     private final UsageLedgerService ledger;
     private final AiGate gate;
     private final AppProperties properties;
+    private final BackgroundAgentService background;
 
     public GameApiController(GameService game, RuntimeService runtime, SseService sse,
                              DeepSeekService deepSeek, UsageLedgerService ledger, AiGate gate,
-                             AppProperties properties) {
+                             AppProperties properties, BackgroundAgentService background) {
         this.game = game;
         this.runtime = runtime;
         this.sse = sse;
@@ -37,6 +38,7 @@ public class GameApiController {
         this.ledger = ledger;
         this.gate = gate;
         this.properties = properties;
+        this.background = background;
     }
 
     @GetMapping("/api/state")
@@ -108,19 +110,18 @@ public class GameApiController {
     }
 
     @PostMapping("/api/agent/step")
-    public Map<String, Object> agentStep() {
-        Map<String, Object> map = new LinkedHashMap<>();
-        map.put("ok", false);
-        map.put("error", "content agent not ported");
-        return map;
+    public Map<String, Object> agentStep(@RequestBody(required = false) Map<String, Object> body) {
+        boolean force = body != null && Boolean.TRUE.equals(body.get("force"));
+        Map<String, Object> result = background.step(force);
+        result.put("status", background.status());
+        sse.broadcast();
+        return result;
     }
 
     @PostMapping("/api/agent/toggle")
-    public Map<String, Object> agentToggle() {
-        Map<String, Object> map = new LinkedHashMap<>();
-        map.put("ok", false);
-        map.put("error", "content agent not ported");
-        return map;
+    public Map<String, Object> agentToggle(@RequestBody(required = false) Map<String, Object> body) {
+        boolean start = body != null && Boolean.TRUE.equals(body.get("start"));
+        return background.toggle(start);
     }
 
     @GetMapping("/api/health")

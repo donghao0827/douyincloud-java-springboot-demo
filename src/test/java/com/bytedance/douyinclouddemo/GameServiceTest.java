@@ -15,7 +15,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = {"app.ai-paused=true", "app.data-dir=target/test-data"})
+        properties = {"app.ai-paused=true", "app.data-dir=target/test-data", "app.workspace=target/test-workspace"})
 class GameServiceTest {
     @Autowired
     private GameService game;

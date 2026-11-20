@@ -76,6 +76,16 @@ curl -X POST http://127.0.0.1:8000/live_data_callback \
    - 直播数据回调：`POST /live_data_callback`
 6. 用真实 AppID/直播间开播，确认日志出现 `[liveplay] callback ... events=N`。
 
+### 卡片端 `miniapp/`
+
+`miniapp/` 是抖音直播卡片客户端，和 Java 服务分开部署：
+
+- 用抖音开发者工具打开 `miniapp/`
+- `config.js` 的 `CLOUD` 填 `envID` / `serviceID`
+- `API_BASE` 留空走抖音云 callContainer；本地联调填 `http://127.0.0.1:8001`
+- `project.config.json` 的 AppID 换成真实小玩法 AppID
+- 卡片头像用 Canvas 实时画，作品页走 `/api/screen` 截图
+
 ### 构建报 `COPY ./target ... "/target": not found`
 
 说明云上用的不是仓库根目录这份多阶段 `Dockerfile`，而是一个「先把本地 target 拷进去」的运行时 Dockerfile；`target/` 已被 `.dockerignore` 排除，构建上下文里没有它。

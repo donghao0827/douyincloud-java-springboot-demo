@@ -1,0 +1,23 @@
+<scroll-view scroll-y="true" class="panel">
+  <view class="content">
+    <view class="heading"><text class="title">工位互动</text><image class="fruit" src="/assets/office/orange.png" mode="aspectFit"/></view>
+    <view class="status">{{status}}</view>
+    <view class="boss-countdown" tt:if="{{bossCountdown > 0}}">⚠️ 老板预计 {{bossCountdown}} 秒后到达战场</view>
+    <view class="controls">
+      <view class="section">AI 工作设置</view>
+      <view class="usage">今日 {{todayTokens}} token · 预估自费 {{todayCost}} 🍊</view>
+      <input class="pass" password="{{true}}" placeholder="输入主播控制口令" bindinput="operatorInput"/>
+      <view class="note" tt:if="{{!controlsReady}}">等待支持工作设置的服务端连接</view>
+      <view class="setting-row"><text>允许 AI 调用</text><button class="setting-btn" data-action="ai" bindtap="changeControl" disabled="{{!controlsReady || !operatorEntered || saving}}">{{aiOn ? '已开启' : '已关闭'}}</button></view>
+      <view class="setting-row"><text>自动上班</text><button class="setting-btn" data-action="auto" bindtap="changeControl" disabled="{{!controlsReady || !operatorEntered || saving}}">{{autoOn ? '已开启' : '已关闭'}}</button></view>
+      <view class="setting-row"><text>工作间隔</text><view class="intervals"><button tt:for="{{intervals}}" tt:key="*this" class="setting-btn {{item === intervalMinutes ? 'chosen' : ''}}" data-action="interval" data-minutes="{{item}}" bindtap="changeControl" disabled="{{!controlsReady || !operatorEntered || saving}}">{{item}} 分钟</button></view></view>
+      <view class="setting-row"><text class="note">推进工作会消耗 token</text><button class="setting-btn" data-action="step" bindtap="changeControl" disabled="{{!controlsReady || !operatorEntered || !aiOn || saving || agentBusy}}">立即推进一步</button></view>
+      <view class="note" tt:if="{{controlMessage}}">{{controlMessage}}</view>
+    </view>
+    <view class="section">动作预演</view>
+    <view class="choices">
+      <button tt:for="{{actions}}" tt:key="phase" class="choice {{selected === item.phase ? 'active' : ''}}" data-phase="{{item.phase}}" bindtap="mockPhase">{{item.label}}</button>
+    </view>
+    <view class="footer"><text class="note">预演 6 秒后回到直播</text><button tt:if="{{selected}}" class="back" data-phase="" bindtap="mockPhase">立即返回</button></view>
+  </view>
+</scroll-view>

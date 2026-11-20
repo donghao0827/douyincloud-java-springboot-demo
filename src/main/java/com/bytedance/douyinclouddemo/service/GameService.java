@@ -665,7 +665,10 @@ public class GameService {
     private Map<String, Object> result(boolean ok, String reason) {
         Map<String, Object> map = new LinkedHashMap<>();
         map.put("ok", ok);
-        if (reason != null) map.put("reason", reason);
+        if (reason != null) {
+            map.put("reason", reason);
+            map.put("error", reason);
+        }
         return map;
     }
 

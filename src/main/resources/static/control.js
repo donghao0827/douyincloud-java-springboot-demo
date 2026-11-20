@@ -169,7 +169,23 @@ function startAutoSim() {
 document.addEventListener("click", (event) => {
   const button = event.target.closest("button");
   if (!button) return;
-  if (button.dataset.control) post("/api/control", { action: button.dataset.control });
+  if (button.dataset.control) {
+    const action = button.dataset.control;
+    post("/api/control", { action }).then((data) => {
+      const el = get("controlMessage");
+      if (!el) return;
+      if (!data) { el.textContent = "请求失败，检查主播口令或服务连接"; return; }
+      if (data.ok === false) {
+        const reason = data.reason || data.error || "";
+        el.textContent = reason === "no-work" ? "还没有作品，先点单生成一个页面"
+          : reason.startsWith("phase:") ? `当前阶段 ${reason.slice(6)}，等回到 work 再试`
+          : reason === "unknown-control" ? "服务端还是旧版本，重新部署最新代码"
+          : `操作未完成：${reason || "未知原因"}`;
+        return;
+      }
+      el.textContent = action === "preview" ? "已触发展示作品" : action === "avatar" ? "已开始画头像" : "已触发";
+    });
+  }
   if (button.dataset.event === "join") sendEvent({ type: "join" });
   if (button.dataset.command) sendEvent({ type: "comment", command: button.dataset.command });
   if (button.dataset.like) sendEvent({ type: "like", count: Number(button.dataset.like) });

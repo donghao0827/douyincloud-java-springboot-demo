@@ -154,8 +154,11 @@ Page({
         if (typeof data === 'string') { try { data = JSON.parse(data); } catch { data = null; } }
         if (statusCode === 401) return this.setData({status:'需要主播口令（API_TOKEN）'});
         if (statusCode !== 200 || !data || !data.ok) {
-          const reason = data && data.error;
-          this.setData({status:reason === 'no-work' ? '还没有可展示的作品，先点个单' : '服务端没有进入 ' + action});
+          const reason = data && (data.reason || data.error);
+          this.setData({status:reason === 'no-work' ? '还没有可展示的作品，先点个单'
+            : reason && reason.indexOf('phase:') === 0 ? '当前阶段 ' + reason.slice(6) + '，等回到 work 再试'
+            : reason === 'unknown-control' ? '服务端还是旧版本，重新部署最新代码'
+            : '服务端没有进入 ' + action});
         }
       },
       fail: err => { if (this.active) this.setData({status:(err && err.errMsg) || '服务端请求失败'}); },
@@ -272,7 +275,10 @@ Page({
     this.setData({ bossCountdown: 0 });
   },
   mockPhase(e) {
-    if (!this.liveState) return;
+    if (!this.liveState) {
+      this.setData({status:'玩法状态未连接，先检查云调用权限'});
+      return;
+    }
     const phase = e.currentTarget.dataset.phase;
     const action = this.data.actions.find(item => item.phase === phase);
     if (phase === 'preview' || phase === 'avatar') {

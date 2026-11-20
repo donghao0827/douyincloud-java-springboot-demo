@@ -1,0 +1,36 @@
+<style>*{box-sizing:border-box}html,body{margin:0;height:100%;overflow:hidden;font:12px/1.3 system-ui,"PingFang SC","Hiragino Sans GB",sans-serif}
+body{background:#e7f0d8;color:#2f4a34}
+.hud{height:28px;display:flex;align-items:center;justify-content:space-between;padding:0 10px;font-weight:700}
+.hud span{background:#344d3c;color:#fff6e4;border-radius:99px;padding:1px 8px}
+canvas{display:block;width:100%;height:calc(100% - 28px);touch-action:none;background:#f7f2df}
+</style>
+<div class="hud"><span style="background:none;color:#2f4a34;padding:0">接橘子 · 移动鼠标/手指</span><span id="score">0</span></div>
+<canvas id="c" width="440" height="232"></canvas>
+<script>
+const c=document.getElementById('c'),x=c.getContext('2d'),score=document.getElementById('score');
+let basket=220,target=220,fruitX=120,fruitY=-20,speed=2.2,points=0,keys={};
+addEventListener('keydown',e=>keys[e.key]=true);
+addEventListener('keyup',e=>keys[e.key]=false);
+c.addEventListener('pointermove',e=>{const r=c.getBoundingClientRect();target=(e.clientX-r.left)*440/r.width;});
+c.addEventListener('pointerdown',e=>{const r=c.getBoundingClientRect();target=(e.clientX-r.left)*440/r.width;});
+function reset(){fruitX=20+Math.random()*400;fruitY=-20;speed=2+Math.random()*1.8}
+function loop(){
+  if(keys.ArrowLeft) target-=4;
+  if(keys.ArrowRight) target+=4;
+  target=Math.max(24,Math.min(416,target));
+  basket+=(target-basket)*0.18;
+  fruitY+=speed;
+  if(fruitY>232){
+    if(Math.abs(basket-fruitX)<30){points++;score.textContent=points}
+    else {points=Math.max(0,points-1);score.textContent=points}
+    reset();
+  }
+  x.clearRect(0,0,440,232);
+  x.fillStyle='#f7f2df';x.fillRect(0,0,440,232);
+  x.fillStyle='#e88535';x.beginPath();x.arc(fruitX,fruitY,11,0,7);x.fill();
+  x.fillStyle='#466747';x.fillRect(basket-28,216,56,10);
+  x.fillStyle='#2f4a34';x.font='10px system-ui';x.fillText('接住 +1，漏掉 -1',12,18);
+  requestAnimationFrame(loop);
+}
+reset();requestAnimationFrame(loop);
+</script>

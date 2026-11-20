@@ -1,3 +1,20 @@
 server:
-  port: 8000
+  port: ${PORT:8000}
 
+deepseek:
+  api-key: ${DEEPSEEK_API_KEY:}
+  base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com}
+  model: ${DEEPSEEK_MODEL:deepseek-flash}
+  timeout-ms: ${DEEPSEEK_TIMEOUT_MS:8000}
+  thinking: ${DEEPSEEK_THINKING:false}
+
+app:
+  ai-paused: ${AI_PAUSED:false}
+  data-dir: ${DATA_DIR:data}
+  # 生产环境务必设置；设置后 /api/action、/api/control、/api/ai/pause 需要 X-Kapu-Token 请求头
+  api-token: ${API_TOKEN:}
+
+logging:
+  level:
+    root: INFO
+    com.bytedance.douyinclouddemo: INFO

@@ -1,0 +1,30 @@
+<style>*{box-sizing:border-box}html,body{margin:0;height:100%;overflow:hidden;font:12px/1.3 system-ui,"PingFang SC","Hiragino Sans GB",sans-serif}
+body{background:#fdf1d6;color:#344d3c}
+.hud{height:28px;display:flex;align-items:center;justify-content:space-between;padding:0 10px;font-weight:700}
+.hud span{background:#344d3c;color:#fff6e4;border-radius:99px;padding:1px 8px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:6px 10px;height:calc(100% - 28px)}
+.hole{border:0;border-radius:10px;background:#d9c7a1;box-shadow:inset 0 4px #bda57d;color:#8a6b46;font:700 12px system-ui;cursor:pointer;user-select:none;touch-action:manipulation}
+.hole.hot{background:#c96a34;color:#fff6e4;box-shadow:inset 0 0 0 3px #ffcb86}
+</style>
+<div class="hud"><span style="background:none;color:#344d3c;padding:0">拍老板 · 点冒头的老板</span><span id="score">0</span></div>
+<div class="grid" id="g"></div>
+<script>
+const g=document.getElementById('g'),score=document.getElementById('score'),cells=[];
+let hot=-1,points=0;
+for(let i=0;i<9;i++){
+  const b=document.createElement('button');
+  b.className='hole';b.type='button';b.textContent='···';
+  b.addEventListener('pointerdown',()=>{
+    if(i!==hot) return;
+    points++;score.textContent=points;
+    b.classList.remove('hot');b.textContent='···';hot=-1;
+  });
+  g.appendChild(b);cells.push(b);
+}
+function pop(){
+  if(hot>=0){cells[hot].classList.remove('hot');cells[hot].textContent='···';}
+  hot=Math.floor(Math.random()*9);
+  cells[hot].classList.add('hot');cells[hot].textContent='老板';
+}
+setInterval(pop,650);pop();
+</script>

@@ -1,0 +1,47 @@
+<style>*{box-sizing:border-box}html,body{margin:0;height:100%;overflow:hidden;font:12px/1.3 system-ui,"PingFang SC","Hiragino Sans GB",sans-serif}
+body{background:#e9e1c8;color:#344d3c}
+.hud{height:28px;display:flex;align-items:center;justify-content:space-between;padding:0 10px;font-weight:700}
+.hud span{background:#344d3c;color:#fff6e4;border-radius:99px;padding:1px 8px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr);gap:7px;padding:6px 10px;height:calc(100% - 28px)}
+.card{border:0;border-radius:10px;background:#4b6e54;color:#fff6e4;font:700 24px system-ui;cursor:pointer;box-shadow:inset 0 -4px #2f4a34;touch-action:manipulation}
+.card.open{background:#fff8e8;color:#2f4a34;box-shadow:inset 0 0 0 2px #c96a34}
+.card.done{background:#c96a34;color:#fff6e4;box-shadow:inset 0 0 0 2px #ffcb86}
+</style>
+<div class="hud"><span style="background:none;color:#344d3c;padding:0">翻牌记忆 · 找到三对</span><span id="score">0</span></div>
+<div class="grid" id="g"></div>
+<script>
+const g=document.getElementById('g'),score=document.getElementById('score'),open=[],buttons=[];
+let lock=false,points=0,matched=0,deck=[];
+function shuffle(list){return list.sort(()=>Math.random()-.5)}
+function reset(){
+  deck=shuffle(['咖','橘','码','咖','橘','码']);
+  open.length=0;matched=0;lock=false;
+  buttons.forEach((b,i)=>{b.className='card';b.textContent='?';});
+}
+function flip(i){
+  const b=buttons[i];
+  if(lock||b.classList.contains('done')||open.includes(i)) return;
+  b.textContent=deck[i];b.classList.add('open');open.push(i);
+  if(open.length<2) return;
+  lock=true;
+  const [a,b2]=open;
+  if(deck[a]===deck[b2]){
+    buttons[a].classList.add('done');buttons[b2].classList.add('done');
+    points++;score.textContent=points;matched++;open.length=0;lock=false;
+    if(matched===3) setTimeout(reset,1200);
+  } else {
+    setTimeout(()=>{
+      buttons[a].textContent='?';buttons[b2].textContent='?';
+      buttons[a].classList.remove('open');buttons[b2].classList.remove('open');
+      open.length=0;lock=false;
+    },650);
+  }
+}
+for(let i=0;i<6;i++){
+  const b=document.createElement('button');
+  b.className='card';b.type='button';b.textContent='?';
+  b.addEventListener('pointerdown',()=>flip(i));
+  g.appendChild(b);buttons.push(b);
+}
+reset();
+</script>

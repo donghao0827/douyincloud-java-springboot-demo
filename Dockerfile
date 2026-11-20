@@ -6,7 +6,7 @@ WORKDIR /opt/application
 COPY . .
 
 # 拉取公网依赖较慢，容易失败，建议在settings.xml中更换依赖源
-RUN mvn -s /opt/application/settings.xml -f /opt/application/pom.xml clean package
+RUN mvn -s /opt/application/settings.xml -f /opt/application/pom.xml -DskipTests clean package
 
 # 将构建产物jar包拷贝到运行时目录中
 RUN chmod -R 777 /opt/application/run.sh

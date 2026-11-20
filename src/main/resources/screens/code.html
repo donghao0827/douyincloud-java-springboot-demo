@@ -1,0 +1,11 @@
+<style>*{box-sizing:border-box}body{margin:0;font:12px/1.4 system-ui,"PingFang SC","Hiragino Sans GB",sans-serif}
+body{background:#1b2622;color:#d8ead9;padding:10px;overflow:hidden}
+pre{margin:0;font:10px/1.55 ui-monospace,Menlo,monospace;white-space:pre-wrap}
+.k{color:#f5a7af}.s{color:#b5df98}.n{color:#ffcb86}.c{color:#7c9b88}
+</style>
+<pre><span class="c">// 卡噗刚刚提交的补丁</span>
+<span class="k">export function</span> <span class="n">slackOff</span>(seconds) {
+  <span class="k">const</span> risk = seconds * <span class="n">4</span>;
+  <span class="k">if</span> (risk &gt;= <span class="n">100</span>) <span class="k">return</span> <span class="s">'boss'</span>;
+  <span class="k">return</span> <span class="s">'gameboy'</span>;
+}</pre>

@@ -21,6 +21,13 @@ class GameApiControllerTest {
     @Autowired
     private GameService game;
 
+    @org.junit.jupiter.api.Test
+    void screenWithoutMatchingSnippetIs404() throws Exception {
+        mvc.perform(get("/api/screen").param("id", "nope").param("mode", "preview"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.ok").value(false));
+    }
+
     @BeforeEach
     void reset() {
         game.control("reset");
@@ -67,3 +74,5 @@ class GameApiControllerTest {
                 .andExpect(jsonPath("$.err_no").value(0));
     }
 }
+
+// 追加在类末尾的说明：screen 无匹配 snippet 时应直接 404，不启动 Chromium

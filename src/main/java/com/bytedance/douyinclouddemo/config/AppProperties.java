@@ -17,4 +17,5 @@ public class AppProperties {
     private String workDays = "1,2,3,4,5,6,7";
     private int tickSeconds = 300;
     private String workspace = "workspace";
+    private String chromePath = "";
 }

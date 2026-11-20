@@ -44,8 +44,10 @@ public class BackgroundAgentService {
         return thread;
     });
     private final AtomicBoolean busy = new AtomicBoolean(false);
-    private final Map<String, Object> status = new LinkedHashMap<>();
-    private volatile boolean manualEnabled = false;
+    private final Map<String, Object> status = Collections.synchronizedMap(new LinkedHashMap<>());
+    private volatile boolean autoEnabled;
+    private volatile int tickSeconds;
+    private Path settingsFile;
     private volatile long lastTick = 0;
     private Path workspace;
 
@@ -58,6 +60,19 @@ public class BackgroundAgentService {
     @PostConstruct
     public void init() {
         workspace = Paths.get(props.getWorkspace()).toAbsolutePath().normalize();
+        autoEnabled = props.isBackgroundEnabled();
+        tickSeconds = Math.max(60, props.getTickSeconds());
+        settingsFile = Paths.get(props.getDataDir()).resolve("agent-settings.json");
+        if (Files.exists(settingsFile)) {
+            try {
+                JsonNode saved = mapper.readTree(settingsFile.toFile());
+                autoEnabled = saved.path("autoEnabled").asBoolean(autoEnabled);
+                tickSeconds = Math.max(60,saved.path("tickSeconds").asInt(tickSeconds));
+                gate.setPaused(saved.path("paused").asBoolean(gate.isPaused()));
+            } catch (Exception e) {
+                throw new IllegalStateException("无法读取主播设置", e);
+            }
+        }
         status.put("state", "off");
         status.put("working", false);
         status.put("dateKey", "");
@@ -105,12 +120,15 @@ public class BackgroundAgentService {
     }
 
     public Map<String, Object> status() {
-        Map<String, Object> map = new LinkedHashMap<>(status);
+        Map<String, Object> map;
+        synchronized (status) { map = new LinkedHashMap<>(status); }
+        map.put("autoEnabled", autoEnabled);
+        map.put("busy", busy.get());
         Map<String, Object> schedule = new LinkedHashMap<>();
         schedule.put("start", props.getWorkStart());
         schedule.put("end", props.getWorkEnd());
         schedule.put("days", props.getWorkDays());
-        schedule.put("tickSeconds", Math.max(60, props.getTickSeconds()));
+        schedule.put("tickSeconds", tickSeconds);
         schedule.put("workspace", workspace == null ? "" : workspace.toString());
         map.put("schedule", schedule);
         return map;
@@ -118,19 +136,19 @@ public class BackgroundAgentService {
 
     @Scheduled(fixedDelay = 60_000)
     public void scheduled() {
-        if (!props.isBackgroundEnabled() && !manualEnabled) return;
+        if (!autoEnabled) return;
         if (gate.isPaused()) return;
         if (!isWorkTime()) return;
         long now = System.currentTimeMillis();
-        if (now - lastTick < Math.max(60, props.getTickSeconds()) * 1000L) return;
+        if (now - lastTick < tickSeconds * 1000L) return;
         lastTick = now;
         executor.submit(() -> step(false));
     }
 
-    public synchronized Map<String, Object> step(boolean force) {
+    public Map<String, Object> step(boolean force) {
         if (busy.get()) return skipped("busy");
         String skip = null;
-        if (!force && !props.isBackgroundEnabled() && !manualEnabled) skip = "disabled";
+        if (!force && !autoEnabled) skip = "disabled";
         if (!force && !isWorkTime()) skip = "off-duty";
         if (gate.isPaused()) skip = "ai-paused";
         if (deepSeek.config().get("hasKey") != Boolean.TRUE) skip = "no-key";
@@ -140,7 +158,8 @@ public class BackgroundAgentService {
             return skipped(skip);
         }
 
-        busy.set(true);
+        if (!busy.compareAndSet(false,true)) return skipped("busy");
+        lastTick = System.currentTimeMillis();
         status.put("working", true);
         try {
             Map<String, Object> state = readState();
@@ -230,17 +249,35 @@ public class BackgroundAgentService {
             status.put("lastError", e.getMessage());
             return result(false, e.getMessage());
         } finally {
+            status.put("working", false);
             busy.set(false);
         }
     }
 
-    public Map<String, Object> toggle(boolean start) {
-        manualEnabled = start;
-        status.put("state", start ? "on" : "off");
-        if (start) executor.submit(() -> step(false));
-        Map<String, Object> map = result(true, null);
-        map.put("status", status());
-        return map;
+    public synchronized Map<String, Object> updateSettings(Boolean paused, Boolean enabled, Integer interval)
+            throws java.io.IOException {
+        boolean nextPaused = paused == null ? gate.isPaused() : paused;
+        boolean nextEnabled = enabled == null ? autoEnabled : enabled;
+        int nextInterval = interval == null ? tickSeconds : interval;
+        Map<String,Object> values = new LinkedHashMap<>();
+        values.put("paused", nextPaused);
+        values.put("autoEnabled", nextEnabled);
+        values.put("tickSeconds", nextInterval);
+        Files.createDirectories(settingsFile.getParent());
+        Path temp = Files.createTempFile(settingsFile.getParent(), "agent-settings-", ".tmp");
+        try {
+            mapper.writeValue(temp.toFile(), values);
+            Files.move(temp, settingsFile, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+        } finally {
+            Files.deleteIfExists(temp);
+        }
+        gate.setPaused(nextPaused);
+        autoEnabled = nextEnabled;
+        tickSeconds = nextInterval;
+        Map<String,Object> response = result(true, null);
+        response.putAll(values);
+        response.put("status", status());
+        return response;
     }
 
     private String prompt() {

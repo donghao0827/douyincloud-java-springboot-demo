@@ -584,6 +584,16 @@ public class GameService {
         return map;
     }
 
+    public synchronized Snippet snippetForScreen(String id, String mode) {
+        if (id == null || id.isEmpty() || mode == null || mode.isEmpty()) return null;
+        if (!mode.equals(state.getPhase())) return null;
+        Snippet snippet = state.getSnippet();
+        if (snippet == null || !id.equals(snippet.getId())) return null;
+        if ("avatar".equals(mode) || "preview".equals(mode)) return snippet;
+        if ("play".equals(mode) && "game".equals(snippet.getTask())) return snippet;
+        return null;
+    }
+
     public synchronized Map<String, Object> snapshot() {
         Map<String, Object> map = new LinkedHashMap<>();
         map.put("phase", state.getPhase());

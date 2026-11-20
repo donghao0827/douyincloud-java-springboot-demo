@@ -31,6 +31,15 @@ class LiveEventMapperTest {
     }
 
     @Test
+    void mapsWrappedMessageFormat() throws Exception {
+        ActionEvent wrapped = mapper.map(null, json.readTree(
+                "{\"msg_type\":\"live_comment\",\"data\":\"{\\\"content\\\":\\\"2\\\",\\\"userInfo\\\":{\\\"userName\\\":\\\"阿禾\\\"}}\"}"));
+        assertEquals("comment", wrapped.getType());
+        assertEquals("阿禾", wrapped.getUser());
+        assertEquals("2", wrapped.getCommand());
+    }
+
+    @Test
     void mapsJoinCommentAndInout() throws Exception {
         ActionEvent join = mapper.map("live_comment", json.readTree(
                 "{\"msg_id\":\"j1\",\"data\":{\"content\":\"加入\",\"userInfo\":{\"userName\":\"小满\"}}}"));

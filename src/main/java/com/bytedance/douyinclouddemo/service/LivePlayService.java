@@ -21,6 +21,7 @@ import java.util.concurrent.TimeUnit;
 public class LivePlayService {
     private static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
     private static final String TASK_START_URL = "http://webcast-bytedance-com.openapi.dyc.ivolces.com/api/live_data/task/start";
+    private static final String TASK_STOP_URL = "http://webcast-bytedance-com.openapi.dyc.ivolces.com/api/live_data/task/stop";
     private static final List<String> MSG_TYPES = Arrays.asList("live_like", "live_comment", "live_gift", "live_fansclub", "live_inout");
 
     private final ObjectMapper mapper = new ObjectMapper();
@@ -31,6 +32,8 @@ public class LivePlayService {
     private final RuntimeService runtime;
     private final GameService game;
     private final LiveEventMapper mapperService;
+    private volatile String lastAppId = "";
+    private volatile String lastRoomId = "";
     private final Map<String, Long> seen = new LinkedHashMap<String, Long>(600, 0.75f, true) {
         @Override
         protected boolean removeEldestEntry(Map.Entry<String, Long> eldest) {
@@ -46,6 +49,8 @@ public class LivePlayService {
 
     public boolean startGame(String appId, String roomId) {
         if (appId == null || appId.isEmpty() || roomId == null || roomId.isEmpty()) return false;
+        lastAppId = appId;
+        lastRoomId = roomId;
         game.control("reset");
         boolean all = true;
         for (String msgType : MSG_TYPES) {
@@ -55,7 +60,10 @@ public class LivePlayService {
     }
 
     public void finishGame() {
-        // 抖音云没有强制 stop 也安全：停止任务接口可按需再接，这里保留对局结束钩子。
+        if (lastAppId.isEmpty() || lastRoomId.isEmpty()) return;
+        for (String msgType : MSG_TYPES) {
+            stopTask(lastAppId, lastRoomId, msgType);
+        }
     }
 
     private boolean startTask(String appId, String roomId, String msgType) {
@@ -84,6 +92,30 @@ public class LivePlayService {
             }
         } catch (Exception e) {
             System.err.println("[liveplay] start " + msgType + " exception " + e.getMessage());
+            return false;
+        }
+    }
+
+    private boolean stopTask(String appId, String roomId, String msgType) {
+        try {
+            ObjectNode body = mapper.createObjectNode();
+            body.put("roomid", roomId);
+            body.put("appid", appId);
+            body.put("msg_type", msgType);
+            Request request = new Request.Builder()
+                    .url(TASK_STOP_URL)
+                    .header("Content-Type", "application/json")
+                    .post(RequestBody.create(JSON, mapper.writeValueAsBytes(body)))
+                    .build();
+            try (Response response = client.newCall(request).execute()) {
+                if (!response.isSuccessful()) {
+                    System.err.println("[liveplay] stop " + msgType + " HTTP " + response.code());
+                    return false;
+                }
+                return true;
+            }
+        } catch (Exception e) {
+            System.err.println("[liveplay] stop " + msgType + " exception " + e.getMessage());
             return false;
         }
     }

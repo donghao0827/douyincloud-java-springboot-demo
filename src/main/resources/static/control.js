@@ -109,8 +109,15 @@ async function post(path, body) {
     return response.json().catch(() => ({}));
   } catch (error) {
     console.error("[control]", path, error);
-    get("conn").textContent = `请求失败：${error.message}`;
+    const message = String(error.message || "请求失败");
+    get("conn").textContent = `请求失败：${message}`;
     get("conn").classList.remove("on");
+    const el = get("controlMessage");
+    if (el) {
+      el.textContent = /401/.test(message)
+        ? "需要主播口令：在「对局控制」填写 API_TOKEN 后再点"
+        : `请求失败：${message}`;
+    }
     return null;
   }
 }

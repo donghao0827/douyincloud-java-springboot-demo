@@ -510,6 +510,20 @@ public class GameService {
             caught("主播触发查岗");
             return result(true, null);
         }
+        if ("preview".equals(action)) {
+            if (!"work".equals(state.getPhase())) return result(false, "phase:" + state.getPhase());
+            Snippet current = state.getSnippet();
+            if (current == null || "work-screen".equals(current.getId())) return result(false, "no-work");
+            setPhase("preview", 4500);
+            addFeed("system", "卡噗把作品投到了屏幕上。", "");
+            return result(true, null);
+        }
+        if ("avatar".equals(action)) {
+            if (!"work".equals(state.getPhase())) return result(false, "phase:" + state.getPhase());
+            presentSnippet("avatar", "演示头像", "", defaultAvatarDraw(), "主播", "给你画一个头像。");
+            addFeed("system", "卡噗开始画头像。", "");
+            return result(true, null);
+        }
         if ("reset".equals(action)) {
             state = fresh();
             return result(true, null);

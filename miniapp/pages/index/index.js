@@ -145,6 +145,31 @@ Page({
       else this.cloud.callContainer({path,init:{method:'POST',header,body,timeout:60000},...callbacks});
     } catch {callbacks.fail();callbacks.complete();}
   },
+  triggerControl(action) {
+    const header = {'Content-Type':'application/json','X-Kapu-Token':this.operatorToken || ''};
+    const body = {action};
+    const callbacks = {
+      success: ({statusCode,data}) => {
+        if (!this.active) return;
+        if (typeof data === 'string') { try { data = JSON.parse(data); } catch { data = null; } }
+        if (statusCode === 401) return this.setData({status:'需要主播口令（API_TOKEN）'});
+        if (statusCode !== 200 || !data || !data.ok) {
+          const reason = data && data.error;
+          this.setData({status:reason === 'no-work' ? '还没有可展示的作品，先点个单' : '服务端没有进入 ' + action});
+        }
+      },
+      fail: err => { if (this.active) this.setData({status:(err && err.errMsg) || '服务端请求失败'}); },
+    };
+    try {
+      if (API_BASE) {
+        tt.request({url:API_BASE+'/api/control',method:'POST',header,data:body,timeout:8000,...callbacks});
+      } else {
+        this.ensureCloud().callContainer({path:'/api/control',init:{method:'POST',header,body,timeout:8000},...callbacks});
+      }
+    } catch (err) {
+      this.setData({status:err.message || '服务端请求失败'});
+    }
+  },
   ensureCloud() {
     if (!this.cloud) this.cloud = tt.createCloud(CLOUD);
     return this.cloud;
@@ -250,6 +275,16 @@ Page({
     if (!this.liveState) return;
     const phase = e.currentTarget.dataset.phase;
     const action = this.data.actions.find(item => item.phase === phase);
+    if (phase === 'preview' || phase === 'avatar') {
+      clearTimeout(this.bossTimer);
+      this.bossTimer = null;
+      this.stopBossCountdown();
+      this.demoEnds = 0;
+      this.setData({selected:''});
+      this.triggerControl(phase);
+      this.setData({status:'请求服务端 · ' + (action ? action.label : phase)});
+      return;
+    }
     const previous = this.data.selected && Date.now() < this.demoEnds ? this.data.selected : this.liveState.phase;
     this.demoCaught = phase === 'inspect' && ['pickup','play','caught'].includes(previous);
     clearTimeout(this.bossTimer);

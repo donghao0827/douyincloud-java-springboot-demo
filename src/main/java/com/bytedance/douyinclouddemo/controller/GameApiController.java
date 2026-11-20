@@ -107,6 +107,22 @@ public class GameApiController {
         return ResponseEntity.ok(result);
     }
 
+    @PostMapping("/api/agent/step")
+    public Map<String, Object> agentStep() {
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("ok", false);
+        map.put("error", "content agent not ported");
+        return map;
+    }
+
+    @PostMapping("/api/agent/toggle")
+    public Map<String, Object> agentToggle() {
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("ok", false);
+        map.put("error", "content agent not ported");
+        return map;
+    }
+
     @GetMapping("/api/health")
     public Map<String, Object> health() {
         Map<String, Object> map = new LinkedHashMap<>();

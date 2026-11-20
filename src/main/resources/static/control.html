@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>卡噗的办公室 · 主播控制台</title>
+  <link rel="stylesheet" href="/control.css" />
+</head>
+<body>
+  <main class="shell">
+    <header class="head">
+      <div class="brand">
+        <span class="seal">噗</span>
+        <div>
+          <p>卡噗的办公室</p>
+          <h1>主播控制台</h1>
+        </div>
+      </div>
+      <div class="head-actions">
+        <a class="live-link" href="/" target="_blank" rel="noopener">打开直播画面 ↗</a>
+        <span class="conn" id="conn">连接中…</span>
+      </div>
+    </header>
+
+    <section class="status-strip">
+      <div><span>当前阶段</span><b id="controlPhase">认真上班</b></div>
+      <div><span>倒计时</span><b id="controlTimer">--</b></div>
+      <div><span>参与人数</span><b id="playerCount">0</b></div>
+      <div><span>工资 / 摸鱼值</span><b id="salaryRisk">0 / 0</b></div>
+      <div><span>轮次</span><b id="roundText">0</b></div>
+    </section>
+
+    <section class="grid">
+      <article class="card"><h2>本月工资单</h2><p id="payBreakdown"></p><ul id="payEntries"></ul></article>
+      <article class="card">
+        <h2>对局控制</h2>
+        <p class="note">主播手动推进整局；观众互动走下面的模拟器。</p>
+        <div class="row">
+          <button class="primary" data-control="play">开始摸鱼</button>
+          <button data-control="resolve">立即结算</button>
+          <button data-control="inspect">触发查岗</button>
+          <button data-control="pause" id="pauseButton">暂停倒计时</button>
+          <button class="danger" data-control="reset">重置整局</button>
+        </div>
+      </article>
+
+      <article class="card">
+        <h2>本轮投票</h2>
+        <p class="note" id="voteNote">还没开始摸鱼。</p>
+        <div class="bars" id="voteBars"></div>
+        <div class="voters" id="voters"></div>
+      </article>
+
+      <article class="card">
+        <h2>观众事件模拟器</h2>
+        <p class="note">每条互动都会先过分诊 agent；精确 1/2 也由它裁决。</p>
+        <label class="field">
+          <span>观众昵称</span>
+          <input id="userName" maxlength="16" value="小橘" />
+        </label>
+        <div class="row">
+          <button data-event="join">评论：加入</button>
+          <button data-command="1">评论 1：收手</button>
+          <button data-command="2">评论 2：再玩</button>
+          <button data-like="30">点赞 ×30</button>
+        </div>
+        <div class="row">
+          <button data-gift="coffee">礼物：咖啡</button>
+          <button data-gift="keyboard">礼物：机械键盘</button>
+          <button data-gift="monitor">礼物：显示器</button>
+          <button data-gift="vacation">礼物：带薪假</button>
+        </div>
+        <div class="row comment-row">
+          <input id="commentInput" maxlength="120" placeholder="自由评论，例如：老板来了，快收手" />
+          <button class="primary" id="sendComment">发送弹幕</button>
+        </div>
+        <div class="order-box">
+          <label class="field">
+            <span>点单类型</span>
+            <select id="orderKind">
+              <option value="ad">广告页</option>
+              <option value="avatar">头像</option>
+              <option value="game">小游戏</option>
+              <option value="todo">待办</option>
+              <option value="code">代码</option>
+            </select>
+          </label>
+          <label class="field grow">
+            <span>点单描述</span>
+            <input id="orderText" maxlength="80" placeholder="想要一个戴眼镜的水豚头像" />
+          </label>
+          <button class="primary" id="sendOrder">提需求</button>
+        </div>
+        <div class="row">
+          <button id="autoSim" type="button">自动模拟观众</button>
+        </div>
+      </article>
+
+      <article class="card">
+        <h2>当前屏幕</h2>
+        <p class="note" id="snippetNote">显示器里是卡噗的工位脚本。</p>
+        <div class="mini-screen"><iframe id="snippetFrame" sandbox="allow-scripts" title="当前屏幕预览"></iframe></div>
+        <ol class="tasks" id="taskList"></ol>
+      </article>
+
+      <article class="card usage-card">
+        <h2>DeepSeek 用量 · 真实台账</h2>
+        <p class="note" id="usageKey">正在读取…</p>
+        <div class="usage-grid" id="usageGrid"></div>
+        <div class="agents" id="usageAgents"></div>
+        <p class="note" id="usageNote"></p>
+        <div class="row">
+          <button id="balanceButton" type="button">查询官方余额</button>
+        </div>
+        <p class="note" id="balanceText"></p>
+      </article>
+
+      <article class="card">
+        <h2>模型交互</h2>
+        <div class="kv" id="aiStatus"></div>
+        <p class="note">单飞 + 最新一条优先：忙时只保留最新消息，旧的计入丢弃。</p>
+        <div class="row">
+          <button id="aiPause" type="button">暂停 AI 调用</button>
+        </div>
+      </article>
+
+      <article class="card">
+        <h2>常驻 agent · 内容工坊</h2>
+        <div class="kv" id="workStatus"></div>
+        <p class="note" id="workNote"></p>
+        <div class="row">
+          <button id="workStep" type="button">立即干一步</button>
+          <button id="workToggle" type="button">启动 / 停止</button>
+        </div>
+      </article>
+
+      <article class="card feed-card">
+        <h2>最近事件</h2>
+        <div class="feed" id="feed"></div>
+      </article>
+    </section>
+
+    <footer class="foot">
+      <span>token 只累加 API 返回的 usage 字段；金额按官方价目折算，仅供参考。</span>
+      <span>流水：<code>data/usage.jsonl</code> · 项目空间：<code>workspace/</code></span>
+    </footer>
+  </main>
+  <script src="/control.js"></script>
+</body>
+</html>

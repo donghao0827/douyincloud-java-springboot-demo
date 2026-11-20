@@ -24,6 +24,12 @@ if (window.ResizeObserver) {
 window.addEventListener("resize", fitMiniScreen);
 setTimeout(fitMiniScreen, 0);
 
+const tokenInput = get("apiToken");
+if (tokenInput) {
+  tokenInput.value = localStorage.getItem("kapuToken") || "";
+  tokenInput.addEventListener("input", () => localStorage.setItem("kapuToken", tokenInput.value.trim()));
+}
+
 const CSP = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:; font-src data:; media-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'; frame-src 'none'"><meta charset="utf-8">`;
 
 
@@ -84,11 +90,16 @@ function escapeHtml(value) {
     .replaceAll('"', "&quot;");
 }
 
+function authHeader() {
+  const token = get("apiToken")?.value?.trim() || localStorage.getItem("kapuToken") || "";
+  return token ? { "X-Kapu-Token": token } : {};
+}
+
 async function post(path, body) {
   try {
     const response = await fetch(path, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", ...authHeader() },
       body: JSON.stringify(body),
     });
     if (!response.ok) {

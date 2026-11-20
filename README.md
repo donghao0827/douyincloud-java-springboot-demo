@@ -9,6 +9,7 @@
 - 四层 agent 的核心三层：`router` 分诊、`judge` 判官、`task` 点单；游戏点单直接走预置，不再让模型现写。
 - 真实 DeepSeek 调用：`deepseek-flash`、关闭思考、超时/重试/降级；`AI_PAUSED` 总开关。
 - 真实 token 台账：`data/usage.jsonl`，按 session/today/allTime/agent 拆分；工资按月底薪 + 礼物 − 查岗 − 模型自费计算。
+- **作品与头像分开渲染**：`preview/ad/game` 用 HTML；`avatar` 返回 `draw` 图形指令，网页/卡片用 Canvas 逐笔实时绘制，不再截图。
 - 常驻内容工坊 agent：朝九晚六、真实写 `workspace/` 文件、`STATE.json` / `journal`，云端默认关闭，可控制台「立即干一步」。
 - REST/SSE：`/api/state`、`/api/events`、`/api/action`、`/api/control`、`/api/usage`、`/api/usage/balance`、`/api/ai/pause`、`/api/health`。
 - 控制接口可选 `API_TOKEN` 保护，防止公网任意触发互动烧 token。

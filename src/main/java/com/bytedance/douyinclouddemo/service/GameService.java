@@ -317,13 +317,15 @@ public class GameService {
         return result(false, "unknown-action");
     }
 
-    private Snippet presentSnippet(String task, String title, String html, String user, String reply) {
+    private Snippet presentSnippet(String task, String title, String html, Map<String, Object> draw,
+                                   String user, String reply) {
         long at = System.currentTimeMillis();
         Snippet snippet = new Snippet();
         snippet.setId(UUID.randomUUID().toString());
         snippet.setTask(task);
         snippet.setTitle(limit(title == null || title.isEmpty() ? (reply == null || reply.isEmpty() ? user : reply) : title, 24));
         snippet.setHtml(html);
+        snippet.setDraw(draw);
         snippet.setUser(limit(user == null ? "观众" : user, 16));
         snippet.setReply(limit(reply == null ? "" : reply, 60));
         snippet.setAt(at);
@@ -460,7 +462,9 @@ public class GameService {
         String html = preset != null ? preset.getHtml()
                 : data != null && data.getHtml() != null && !data.getHtml().isEmpty() ? data.getHtml()
                 : assets.screen("ad");
-        presentSnippet(task, title, html, player.getName(), reply);
+        Map<String, Object> draw = "avatar".equals(task) && data != null ? data.getDraw() : null;
+        if ("avatar".equals(task) && draw == null) draw = defaultAvatarDraw();
+        presentSnippet(task, title, html, draw, player.getName(), reply);
         addFeed("task", "点单：" + reply, player.getName());
         if (preset != null) addFeed("game", "预置游戏：" + preset.getTitle(), player.getName());
         if (Boolean.TRUE.equals(meta.get("degraded")) && preset == null) {
@@ -584,12 +588,38 @@ public class GameService {
         return map;
     }
 
+    private Map<String, Object> defaultAvatarDraw() {
+        Map<String, Object> draw = new LinkedHashMap<>();
+        draw.put("bg", "#20332f");
+        List<Map<String, Object>> shapes = new ArrayList<>();
+        shapes.add(shape("circle", "cx", 100, "cy", 78, "r", 46, "fill", "#e8b98d"));
+        shapes.add(shape("circle", "cx", 54, "cy", 82, "r", 11, "fill", "#e8b98d"));
+        shapes.add(shape("circle", "cx", 146, "cy", 82, "r", 11, "fill", "#e8b98d"));
+        shapes.add(shape("rect", "x", 60, "y", 124, "w", 80, "h", 58, "rx", 20, "fill", "#466747"));
+        shapes.add(shape("line", "x1", 70, "y1", 62, "x2", 90, "y2", 60, "stroke", "#3a2a1e", "width", 5));
+        shapes.add(shape("line", "x1", 110, "y1", 60, "x2", 130, "y2", 62, "stroke", "#3a2a1e", "width", 5));
+        shapes.add(shape("circle", "cx", 82, "cy", 84, "r", 5, "fill", "#2b2118"));
+        shapes.add(shape("circle", "cx", 118, "cy", 84, "r", 5, "fill", "#2b2118"));
+        shapes.add(shape("arc", "cx", 100, "cy", 98, "r", 14, "start", 0.3, "end", 2.8, "stroke", "#7c4a3a", "width", 3));
+        draw.put("shapes", shapes);
+        return draw;
+    }
+
+    private Map<String, Object> shape(String type, Object... values) {
+        Map<String, Object> shape = new LinkedHashMap<>();
+        shape.put("type", type);
+        for (int i = 0; i + 1 < values.length; i += 2) {
+            shape.put(String.valueOf(values[i]), values[i + 1]);
+        }
+        return shape;
+    }
+
     public synchronized Snippet snippetForScreen(String id, String mode) {
         if (id == null || id.isEmpty() || mode == null || mode.isEmpty()) return null;
         if (!mode.equals(state.getPhase())) return null;
         Snippet snippet = state.getSnippet();
         if (snippet == null || !id.equals(snippet.getId())) return null;
-        if ("avatar".equals(mode) || "preview".equals(mode)) return snippet;
+        if ("preview".equals(mode)) return snippet;
         if ("play".equals(mode) && "game".equals(snippet.getTask())) return snippet;
         return null;
     }

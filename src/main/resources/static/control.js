@@ -26,6 +26,56 @@ setTimeout(fitMiniScreen, 0);
 
 const CSP = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:; font-src data:; media-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'; frame-src 'none'"><meta charset="utf-8">`;
 
+
+function avatarCanvasDocument(draw) {
+  const data = JSON.stringify(draw).replace(/</g, "\\u003c");
+  return `<style>html,body{margin:0;width:440px;height:260px;overflow:hidden;background:#182722}canvas{display:block}</style>
+  <canvas id="avatar" width="440" height="260"></canvas>
+  <script>
+  const draw = ${data};
+  const canvas = document.getElementById('avatar');
+  const ctx = canvas.getContext('2d');
+  const S = 260 / 200, OX = 90, OY = 0;
+  const started = performance.now();
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  function rounded(x, y, w, h, r) {
+    r = Math.min(r || 0, w / 2, h / 2);
+    ctx.beginPath(); ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y);
+  }
+  function paint(s) {
+    if (s.fill) { ctx.fillStyle = s.fill; ctx.fill(); }
+    if (s.stroke) { ctx.strokeStyle = s.stroke; ctx.lineWidth = Math.max(1, (s.width || 2) * S); ctx.stroke(); }
+  }
+  function shape(s) {
+    const X = v => OX + v * S, Y = v => OY + v * S, R = v => v * S;
+    if (s.type === 'circle') { ctx.beginPath(); ctx.arc(X(s.cx), Y(s.cy), R(s.r), 0, Math.PI * 2); paint(s); }
+    else if (s.type === 'rect') { rounded(X(s.x), Y(s.y), s.w * S, s.h * S, (s.rx || 0) * S); paint(s); }
+    else if (s.type === 'polygon' && s.points && s.points.length) {
+      ctx.beginPath(); s.points.forEach((p, i) => i ? ctx.lineTo(X(p[0]), Y(p[1])) : ctx.moveTo(X(p[0]), Y(p[1])));
+      ctx.closePath(); paint(s);
+    } else if (s.type === 'line') {
+      ctx.beginPath(); ctx.moveTo(X(s.x1), Y(s.y1)); ctx.lineTo(X(s.x2), Y(s.y2)); paint(s);
+    } else if (s.type === 'arc') {
+      ctx.beginPath(); ctx.arc(X(s.cx), Y(s.cy), R(s.r), s.start, s.end); paint(s);
+    }
+  }
+  function frame(now) {
+    ctx.clearRect(0, 0, 440, 260);
+    ctx.fillStyle = /^#[0-9a-f]{6}$/i.test(draw.bg || '') ? draw.bg : '#182722';
+    ctx.fillRect(0, 0, 440, 260);
+    const shapes = draw.shapes || [];
+    const shown = Math.min(shapes.length, 1 + Math.floor((now - started) / 170));
+    for (let i = 0; i < shown; i++) shape(shapes[i]);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+  </script>`;
+}
+
 function escapeHtml(value) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
@@ -191,7 +241,10 @@ function applySnippet(state) {
   }
   if (snippet.id !== lastSnippetId) {
     lastSnippetId = snippet.id;
-    get("snippetFrame").srcdoc = `${CSP}${snippet.html || ""}`;
+    const draw = snippet.task === "avatar" && snippet.draw && snippet.draw.shapes;
+    get("snippetFrame").srcdoc = draw
+      ? `${CSP}${avatarCanvasDocument(snippet.draw)}`
+      : `${CSP}${snippet.html || ""}`;
   }
   get("snippetNote").textContent = `${snippet.title || snippet.reply || ""}${snippet.user ? ` · ${snippet.user}` : ""}`;
 

@@ -139,10 +139,135 @@ public class AgentService {
         decision.setTask(task);
         decision.setTitle(clamp(data.path("title").asText(""), 20));
         decision.setReply(clamp(data.path("reply").asText(""), 40));
+        if ("avatar".equals(task)) {
+            Map<String, Object> draw = sanitizeDraw(data.path("draw"));
+            if (draw == null) return null;
+            decision.setDraw(draw);
+            return decision;
+        }
         String html = data.path("html").asText("");
         if (!safeHtml(html)) return null;
         decision.setHtml(html);
         return decision;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> sanitizeDraw(JsonNode draw) {
+        if (draw == null || !draw.isObject()) return null;
+        String bg = color(draw.path("bg").asText(""), "#fdf6e8");
+        if (bg == null) bg = "#fdf6e8";
+        JsonNode shapes = draw.path("shapes");
+        if (!shapes.isArray() || shapes.size() == 0 || shapes.size() > 24) return null;
+        List<Map<String, Object>> normalized = new ArrayList<>();
+        for (JsonNode shape : shapes) {
+            Map<String, Object> item = sanitizeShape(shape);
+            if (item == null) return null;
+            normalized.add(item);
+        }
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("bg", bg);
+        result.put("shapes", normalized);
+        return result;
+    }
+
+    private Map<String, Object> sanitizeShape(JsonNode shape) {
+        if (shape == null || !shape.isObject()) return null;
+        String type = shape.path("type").asText("");
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("type", type);
+        if ("circle".equals(type)) {
+            Double cx = number(shape, "cx", 0, 200);
+            Double cy = number(shape, "cy", 0, 200);
+            Double r = number(shape, "r", 1, 200);
+            String fill = color(shape.path("fill").asText(""), null);
+            String stroke = color(shape.path("stroke").asText(""), null);
+            if (cx == null || cy == null || r == null || (fill == null && stroke == null)) return null;
+            item.put("cx", cx); item.put("cy", cy); item.put("r", r);
+            if (fill != null) item.put("fill", fill);
+            if (stroke != null) item.put("stroke", stroke);
+            return item;
+        }
+        if ("rect".equals(type)) {
+            Double x = number(shape, "x", 0, 200);
+            Double y = number(shape, "y", 0, 200);
+            Double w = number(shape, "w", 1, 200);
+            Double h = number(shape, "h", 1, 200);
+            Double rx = number(shape, "rx", 0, 100);
+            String fill = color(shape.path("fill").asText(""), null);
+            String stroke = color(shape.path("stroke").asText(""), null);
+            if (x == null || y == null || w == null || h == null || (fill == null && stroke == null)) return null;
+            item.put("x", x); item.put("y", y); item.put("w", w); item.put("h", h);
+            if (rx != null) item.put("rx", rx);
+            if (fill != null) item.put("fill", fill);
+            if (stroke != null) item.put("stroke", stroke);
+            return item;
+        }
+        if ("polygon".equals(type)) {
+            JsonNode points = shape.path("points");
+            if (!points.isArray() || points.size() < 3 || points.size() > 12) return null;
+            List<List<Double>> list = new ArrayList<>();
+            for (JsonNode point : points) {
+                if (!point.isArray() || point.size() != 2) return null;
+                Double px = clampNumber(point.get(0));
+                Double py = clampNumber(point.get(1));
+                if (px == null || py == null) return null;
+                List<Double> pair = new ArrayList<>();
+                pair.add(px); pair.add(py);
+                list.add(pair);
+            }
+            String fill = color(shape.path("fill").asText(""), null);
+            String stroke = color(shape.path("stroke").asText(""), null);
+            if (fill == null && stroke == null) return null;
+            item.put("points", list);
+            if (fill != null) item.put("fill", fill);
+            if (stroke != null) item.put("stroke", stroke);
+            return item;
+        }
+        if ("line".equals(type)) {
+            Double x1 = number(shape, "x1", 0, 200);
+            Double y1 = number(shape, "y1", 0, 200);
+            Double x2 = number(shape, "x2", 0, 200);
+            Double y2 = number(shape, "y2", 0, 200);
+            Double width = number(shape, "width", 1, 20);
+            String stroke = color(shape.path("stroke").asText(""), "#2f4a34");
+            if (x1 == null || y1 == null || x2 == null || y2 == null || stroke == null) return null;
+            item.put("x1", x1); item.put("y1", y1); item.put("x2", x2); item.put("y2", y2);
+            item.put("stroke", stroke); item.put("width", width == null ? 2 : width);
+            return item;
+        }
+        if ("arc".equals(type)) {
+            Double cx = number(shape, "cx", 0, 200);
+            Double cy = number(shape, "cy", 0, 200);
+            Double r = number(shape, "r", 1, 200);
+            Double start = number(shape, "start", -7, 7);
+            Double end = number(shape, "end", -7, 7);
+            Double width = number(shape, "width", 1, 20);
+            String stroke = color(shape.path("stroke").asText(""), "#2f4a34");
+            if (cx == null || cy == null || r == null || start == null || end == null || stroke == null) return null;
+            item.put("cx", cx); item.put("cy", cy); item.put("r", r);
+            item.put("start", start); item.put("end", end);
+            item.put("stroke", stroke); item.put("width", width == null ? 2 : width);
+            return item;
+        }
+        return null;
+    }
+
+    private Double number(JsonNode node, String field, double min, double max) {
+        JsonNode value = node.get(field);
+        if (value == null || !value.isNumber()) return null;
+        double number = value.asDouble();
+        if (number < min || number > max) return null;
+        return number;
+    }
+
+    private Double clampNumber(JsonNode value) {
+        if (value == null || !value.isNumber()) return null;
+        return Math.max(0, Math.min(200, value.asDouble()));
+    }
+
+    private String color(String value, String fallback) {
+        if (value == null || !value.matches("#[0-9a-fA-F]{6}")) return fallback;
+        return value.toLowerCase();
     }
 
     public boolean safeHtml(String html) {

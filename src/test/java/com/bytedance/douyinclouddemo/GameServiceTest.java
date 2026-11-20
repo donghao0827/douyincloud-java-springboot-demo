@@ -2,6 +2,7 @@ package com.bytedance.douyinclouddemo;
 
 import com.bytedance.douyinclouddemo.model.ActionEvent;
 import com.bytedance.douyinclouddemo.model.Game;
+import com.bytedance.douyinclouddemo.model.ProjectWorkEvent;
 import com.bytedance.douyinclouddemo.model.Snippet;
 import org.junit.jupiter.api.BeforeEach;
 import com.bytedance.douyinclouddemo.service.GameService;
@@ -35,6 +36,19 @@ class GameServiceTest {
         Snippet snippet = (Snippet) ((Map<String, Object>) state.get("ai")).get("snippet");
         assertEquals("game", snippet.getTask());
         assertNotNull(state.get("currentGame"));
+        game.control("reset");
+    }
+
+    @Test
+    void backgroundProjectUpdatesWorkScreen() {
+        game.onProjectWork(new ProjectWorkEvent("咖啡广告页 2.0", "artifacts/coffee.html",
+                "<main><h1>咖啡</h1></main>", "完成首屏骨架"));
+        Map<String, Object> state = game.publicState();
+        assertEquals("work", state.get("phase"));
+        assertNotNull(state.get("project"));
+        Snippet snippet = (Snippet) ((Map<String, Object>) state.get("ai")).get("snippet");
+        assertEquals("code", snippet.getTask());
+        assertTrue(String.valueOf(snippet.getHtml()).contains("咖啡"));
         game.control("reset");
     }
 

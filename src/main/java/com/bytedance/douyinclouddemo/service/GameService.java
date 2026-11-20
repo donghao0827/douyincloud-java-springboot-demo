@@ -74,7 +74,16 @@ public class GameService {
         next.getStats().put("playSeconds", 0);
         next.getStats().put("likes", 0);
         next.getStats().put("games", 0);
-        next.setSnippet(workScreenSnippet(at));
+        Snippet work = workScreenSnippet(at);
+        work.setTitle("咖啡广告页 2.0");
+        next.setSnippet(work);
+        next.setProjectSnippet(work);
+        Map<String, Object> project = new LinkedHashMap<>();
+        project.put("title", "咖啡广告页 2.0");
+        project.put("summary", "正在搭首页骨架");
+        project.put("file", "work.js");
+        project.put("updatedAt", at);
+        next.setProject(project);
         next.setAiMode("idle");
         next.setCreatedAt(at);
         next.setUpdatedAt(at);
@@ -145,10 +154,43 @@ public class GameService {
         return true;
     }
 
+    private void restoreProjectScreen() {
+        if (state.getProjectSnippet() != null) {
+            state.setSnippet(state.getProjectSnippet());
+        } else {
+            state.setSnippet(workScreenSnippet(System.currentTimeMillis()));
+        }
+    }
+
+    @org.springframework.context.event.EventListener
+    public synchronized void onProjectWork(com.bytedance.douyinclouddemo.model.ProjectWorkEvent event) {
+        if (event == null || event.getFile() == null || event.getFile().isEmpty()) return;
+        long at = System.currentTimeMillis();
+        String title = limit(event.getTitle(), 24);
+        Map<String, Object> project = new LinkedHashMap<>();
+        project.put("title", title);
+        project.put("summary", event.getSummary());
+        project.put("file", event.getFile());
+        project.put("updatedAt", at);
+        state.setProject(project);
+        Snippet snippet = new Snippet();
+        snippet.setId("work-" + UUID.randomUUID());
+        snippet.setTask("code");
+        snippet.setTitle(title);
+        snippet.setHtml(event.getHtml());
+        snippet.setUser("卡噗");
+        snippet.setReply(event.getSummary());
+        snippet.setAt(at);
+        state.setProjectSnippet(snippet);
+        if ("work".equals(state.getPhase())) state.setSnippet(snippet);
+        addFeed("work", "推进：" + event.getSummary(), "卡噗");
+    }
+
     private void restorePlayScreen() {
         if (state.getPlaySnippetId() != null && state.getSnippet() != null
                 && state.getPlaySnippetId().equals(state.getSnippet().getId())) {
-            state.setSnippet(state.getScreenBeforePlay() != null ? state.getScreenBeforePlay() : workScreenSnippet(System.currentTimeMillis()));
+            state.setSnippet(state.getScreenBeforePlay() != null ? state.getScreenBeforePlay()
+                    : state.getProjectSnippet() != null ? state.getProjectSnippet() : workScreenSnippet(System.currentTimeMillis()));
         }
         state.setPlaySnippetId(null);
         state.setScreenBeforePlay(null);
@@ -178,6 +220,7 @@ public class GameService {
         state.setLastResult(result);
         state.setRisk(0);
         setPhase("work", 0);
+        restoreProjectScreen();
         addFeed("system", loss > 0 ? "表决结束，扣 1 颗小橘" : "表决结束，本次免扣", "");
     }
 
@@ -490,7 +533,10 @@ public class GameService {
                 && state.getPhaseEndsAt() != null && at >= state.getPhaseEndsAt()) {
             boolean wasCaught = "caught".equals(state.getPhase());
             if (wasCaught) settleInspection();
-            else setPhase("work", 0);
+            else {
+                setPhase("work", 0);
+                restoreProjectScreen();
+            }
             addFeed("system", wasCaught ? "本次查岗结束。" : "卡噗回到工位，继续写页面。", "");
         }
     }
@@ -597,6 +643,7 @@ public class GameService {
         ai.put("tasks", state.getTasks());
         map.put("ai", ai);
         map.put("currentGame", state.getCurrentGame());
+        map.put("project", state.getProject());
         map.put("lastResult", state.getLastResult());
         map.put("stats", state.getStats());
         map.put("usage", ledger.summary());

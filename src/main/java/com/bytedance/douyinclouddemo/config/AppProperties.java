@@ -11,7 +11,7 @@ public class AppProperties {
     private boolean aiPaused = false;
     private String dataDir = "data";
     private String apiToken = "";
-    private boolean backgroundEnabled = false;
+    private boolean backgroundEnabled = true;
     private String workStart = "09:00";
     private String workEnd = "18:00";
     private String workDays = "1,2,3,4,5,6,7";

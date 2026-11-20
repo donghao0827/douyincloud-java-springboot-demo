@@ -138,7 +138,9 @@ public class GameApiController {
     }
 
     private boolean operatorAllowed(String token) {
-        return token != null && !token.isEmpty() && token.equals(properties.getApiToken());
+        String required = properties.getApiToken();
+        if (required == null || required.isEmpty()) return true;
+        return token != null && token.equals(required);
     }
 
     private ResponseEntity<Map<String,Object>> saveSettings(Boolean paused, Boolean enabled, Integer seconds) {

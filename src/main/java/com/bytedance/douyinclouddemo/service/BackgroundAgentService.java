@@ -2,9 +2,11 @@ package com.bytedance.douyinclouddemo.service;
 
 import com.bytedance.douyinclouddemo.config.AppProperties;
 import com.bytedance.douyinclouddemo.model.ChatResult;
+import com.bytedance.douyinclouddemo.model.ProjectWorkEvent;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -37,6 +39,7 @@ public class BackgroundAgentService {
     private final AppProperties props;
     private final DeepSeekService deepSeek;
     private final AiGate gate;
+    private final ApplicationEventPublisher publisher;
     private final ObjectMapper mapper = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
     private final ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
         Thread thread = new Thread(r, "kapu-background");
@@ -51,10 +54,12 @@ public class BackgroundAgentService {
     private volatile long lastTick = 0;
     private Path workspace;
 
-    public BackgroundAgentService(AppProperties props, DeepSeekService deepSeek, AiGate gate) {
+    public BackgroundAgentService(AppProperties props, DeepSeekService deepSeek, AiGate gate,
+                                  ApplicationEventPublisher publisher) {
         this.props = props;
         this.deepSeek = deepSeek;
         this.gate = gate;
+        this.publisher = publisher;
     }
 
     @PostConstruct
@@ -203,6 +208,7 @@ public class BackgroundAgentService {
             String summary = clean(data.path("summary").asText(""), 80);
             String next = clean(data.path("next").asText(""), 60);
             String file = "";
+            String artifactHtml = "";
             if ("write_file".equals(action)) {
                 String path = data.path("path").asText("");
                 String content = data.path("content").asText("");
@@ -215,6 +221,7 @@ public class BackgroundAgentService {
                 }
                 Files.createDirectories(target.getParent());
                 Files.write(target, content.getBytes(StandardCharsets.UTF_8));
+                artifactHtml = content;
                 file = workspace.relativize(target).toString().replace('\\', '/');
             }
 
@@ -249,6 +256,10 @@ public class BackgroundAgentService {
             status.put("lastNext", next);
             status.put("lastFile", file);
             status.put("lastError", null);
+            if (!file.isEmpty()) {
+                publisher.publishEvent(new ProjectWorkEvent(
+                        summary.isEmpty() ? file : summary, file, artifactHtml, summary));
+            }
             return result(true, null, file);
         } catch (Exception e) {
             status.put("state", "error");

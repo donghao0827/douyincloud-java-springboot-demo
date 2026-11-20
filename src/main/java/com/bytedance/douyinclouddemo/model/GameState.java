@@ -28,6 +28,8 @@ public class GameState {
     private List<Map<String, Object>> tasks = new ArrayList<>();
     private Snippet snippet;
     private Snippet lastTask;
+    private Snippet projectSnippet;
+    private Map<String, Object> project = new LinkedHashMap<>();
     private Map<String, Object> currentGame;
     private String playSnippetId;
     private Snippet screenBeforePlay;

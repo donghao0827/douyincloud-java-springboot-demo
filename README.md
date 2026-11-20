@@ -58,7 +58,7 @@ curl -X POST http://127.0.0.1:8000/live_data_callback \
 | `API_TOKEN` | 设置后 `/api/action`、`/api/control`、`/api/ai/pause` 需要 `X-Kapu-Token` 请求头 |
 | `DATA_DIR` | 台账/工资文件目录，默认 `data` |
 | `CHROME_PATH` | Chromium 路径；Docker 镜像默认 `/usr/bin/chromium`，本地可指向 Chrome |
-| `ENABLE_BACKGROUND_AGENT` | 常驻工坊自动开工，默认 false；云端建议关闭 |
+| `ENABLE_BACKGROUND_AGENT` | 常驻工坊自动开工，默认 true；想省 token 可设 false |
 | `AGENT_WORK_START` / `AGENT_WORK_END` | 工坊上下班时间，默认 09:00 / 18:00 |
 | `AGENT_WORK_DAYS` | ISO 星期，默认 1..7 |
 | `AGENT_TICK_SECONDS` | 工坊步进间隔，下限 60 秒 |

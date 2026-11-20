@@ -74,6 +74,15 @@ curl -X POST http://127.0.0.1:8000/live_data_callback \
    - 直播数据回调：`POST /live_data_callback`
 6. 用真实 AppID/直播间开播，确认日志出现 `[liveplay] callback ... events=N`。
 
+### 构建报 `COPY ./target ... "/target": not found`
+
+说明云上用的不是仓库根目录这份多阶段 `Dockerfile`，而是一个「先把本地 target 拷进去」的运行时 Dockerfile；`target/` 已被 `.dockerignore` 排除，构建上下文里没有它。
+
+处理方式二选一：
+
+- **推荐**：把构建方式改成「Dockerfile」，路径填仓库根目录的 `Dockerfile`；这份 Dockerfile 用 `COPY --from=build`，会在镜像里自己 `mvn package`，不依赖 context 里的 `target/`。
+- 如果你必须在控制台用运行时 Dockerfile：先在本机/ CI 执行 `mvn -s settings.xml -DskipTests package`，并确保 `target/` 在构建上下文里（同时从 `.dockerignore` 移除 `target/`），否则 `COPY ./target` 一定失败。
+
 `/start_game` 会按 demo 的方式调用抖音云内网接口开启 `live_like / live_comment / live_gift / live_fansclub / live_inout` 推送；`/live_data_callback` 会按 `x-msg-type` 和 payload 自动映射。
 
 ## 事件格式兼容

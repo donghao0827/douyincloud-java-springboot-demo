@@ -1,7 +1,9 @@
 .git/
 .idea/
 .mvn/
-target/
+# 抖音云的运行镜像从预编译产物中复制可执行 JAR
+target/*
+!target/douyincloud-demo-0.0.1-SNAPSHOT.jar
 data/
 *.log
 .DS_Store

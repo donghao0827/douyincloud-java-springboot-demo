@@ -580,6 +580,7 @@ public class GameService {
         ai.put("model", config.get("model"));
         ai.put("thinking", config.get("thinking"));
         ai.put("background", background.status());
+        ai.put("tasks", state.getTasks());
         map.put("ai", ai);
         map.put("currentGame", state.getCurrentGame());
         map.put("lastResult", state.getLastResult());

@@ -127,7 +127,14 @@ public class BackgroundAgentService {
         Map<String, Object> schedule = new LinkedHashMap<>();
         schedule.put("start", props.getWorkStart());
         schedule.put("end", props.getWorkEnd());
-        schedule.put("days", props.getWorkDays());
+        List<Integer> days = new ArrayList<>();
+        for (String part : (props.getWorkDays() == null ? "1,2,3,4,5,6,7" : props.getWorkDays()).split(",")) {
+            try {
+                days.add(Integer.parseInt(part.trim()));
+            } catch (Exception ignored) {
+            }
+        }
+        schedule.put("days", days);
         schedule.put("tickSeconds", tickSeconds);
         schedule.put("workspace", workspace == null ? "" : workspace.toString());
         map.put("schedule", schedule);

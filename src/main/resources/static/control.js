@@ -102,6 +102,9 @@ async function post(path, body) {
       headers: { "content-type": "application/json", ...authHeader() },
       body: JSON.stringify(body),
     });
+    if (response.status === 401) {
+      throw new Error("主播口令缺失或不正确，请在「对局控制」填写云服务的 API_TOKEN 后重试");
+    }
     if (!response.ok) {
       const data = await response.json().catch(() => ({}));
       throw new Error(data.error || `HTTP ${response.status}`);
@@ -110,14 +113,8 @@ async function post(path, body) {
   } catch (error) {
     console.error("[control]", path, error);
     const message = String(error.message || "请求失败");
-    get("conn").textContent = `请求失败：${message}`;
-    get("conn").classList.remove("on");
     const el = get("controlMessage");
-    if (el) {
-      el.textContent = /401/.test(message)
-        ? "需要主播口令：在「对局控制」填写 API_TOKEN 后再点"
-        : `请求失败：${message}`;
-    }
+    if (el) el.textContent = `请求失败：${message}`;
     return null;
   }
 }
@@ -180,11 +177,12 @@ document.addEventListener("click", (event) => {
     const action = button.dataset.control;
     post("/api/control", { action }).then((data) => {
       const el = get("controlMessage");
-      if (!el) return;
-      if (!data) { el.textContent = "请求失败，检查主播口令或服务连接"; return; }
+      if (!el || !data) return;
       if (data.ok === false) {
         const reason = data.reason || data.error || "";
         el.textContent = reason === "no-work" ? "还没有作品，先点单生成一个页面"
+          : reason === "paused" ? "对局已暂停，恢复倒计时后再试"
+          : reason === "not-playing" ? "当前没有进行中的摸鱼投票"
           : reason.startsWith("phase:") ? `当前阶段 ${reason.slice(6)}，等回到 work 再试`
           : reason === "unknown-control" ? "服务端还是旧版本，重新部署最新代码"
           : `操作未完成：${reason || "未知原因"}`;

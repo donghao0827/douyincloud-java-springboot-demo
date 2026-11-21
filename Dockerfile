@@ -1,20 +1,5 @@
-# 两个阶段共用抖音云 JDK 8 镜像和火山引擎 Debian 软件源。
-FROM public-cn-beijing.cr.volces.com/public/base:maven-3.6.0-jdk-8-slim AS base
-ARG DEBIAN_MIRROR=http://mirrors.volces.com
-RUN set -eu; . /etc/os-release; \
-    suite="${VERSION_CODENAME:-}"; \
-    if [ -z "$suite" ]; then suite="$(sed -n 's/.*(\([^)]*\)).*/\1/p' /etc/os-release | head -1)"; fi; \
-    case "$suite" in \
-      jessie|stretch|buster) root="$DEBIAN_MIRROR/debian-archive"; security="$suite/updates" ;; \
-      bullseye|bookworm|trixie) root="$DEBIAN_MIRROR"; security="$suite-security" ;; \
-      *) echo "Unsupported Debian suite: $suite" >&2; exit 1 ;; \
-    esac; \
-    printf 'deb %s/debian %s main\ndeb %s/debian-security %s main\n' \
-      "$root" "$suite" "$root" "$security" > /etc/apt/sources.list; \
-    rm -f /etc/apt/sources.list.d/debian.sources
-
-# 构建阶段：在镜像内编译，不依赖仓库里预先存在的 target/
-FROM base AS build
+# 编译环境与运行时独立，运行时从受维护的 Debian 源安装浏览器。
+FROM public-cn-beijing.cr.volces.com/public/base:maven-3.6.0-jdk-8-slim AS build
 
 WORKDIR /opt/application
 COPY pom.xml settings.xml run.sh ./
@@ -24,11 +9,13 @@ COPY src ./src
 RUN mvn -s /opt/application/settings.xml -f /opt/application/pom.xml -DskipTests clean package
 
 # 运行阶段：只带 jar 和启动脚本
-FROM base
+FROM debian:bookworm-slim
 
 # 方案 A：Java 服务内用 Chromium CLI 截图，不跑 Node/Puppeteer
-RUN apt-get update && apt-get install -y --no-install-recommends \
-      chromium fonts-noto-cjk \
+RUN sed -i 's|deb.debian.org|mirrors.volces.com|g' /etc/apt/sources.list.d/debian.sources \
+    && apt-get update && apt-get install -y --no-install-recommends \
+      openjdk-17-jre-headless chromium fonts-noto-cjk \
+    && chromium --version && java -version \
     && rm -rf /var/lib/apt/lists/*
 
 ENV CHROME_PATH=/usr/bin/chromium

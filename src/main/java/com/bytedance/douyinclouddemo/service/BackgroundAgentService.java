@@ -108,25 +108,48 @@ public class BackgroundAgentService {
         Files.createDirectories(workspace.resolve("artifacts"));
         Files.createDirectories(workspace.resolve("journal"));
         Path brief = workspace.resolve("PROJECT.md");
-        if (!Files.exists(brief)) {
+        Path entry = workspace.resolve("artifacts/index.html");
+        Path state = workspace.resolve("STATE.json");
+        boolean legacy = "卡噗的办公室".equals(readState().get("project"));
+        if (legacy) {
+            Path artifacts = workspace.resolve("artifacts");
+            if (Files.isSymbolicLink(artifacts)) throw new java.io.IOException("作品目录不能是符号链接");
+            try (java.util.stream.Stream<Path> files = Files.walk(artifacts)) {
+                for (Path path : files.sorted(Comparator.reverseOrder()).collect(java.util.stream.Collectors.toList())) {
+                    if (!path.equals(artifacts)) Files.delete(path);
+                }
+            }
+        }
+        if (!Files.exists(entry)) {
+            try (InputStream input = new ClassPathResource("screens/menu.html").getInputStream()) {
+                Files.copy(input, entry);
+            }
+        }
+        if (legacy || !Files.exists(brief)) {
             try (InputStream input = new ClassPathResource("background/PROJECT.md").getInputStream()) {
                 Files.write(brief, StreamUtils.copyToString(input, StandardCharsets.UTF_8).getBytes(StandardCharsets.UTF_8));
             }
         }
-        Path state = workspace.resolve("STATE.json");
-        if (!Files.exists(state)) {
+        if (legacy || !Files.exists(state)) {
             Map<String, Object> initial = new LinkedHashMap<>();
-            initial.put("project", "卡噗的办公室");
+            initial.put("project", "小橘咖啡");
             initial.put("createdAt", System.currentTimeMillis());
             initial.put("day", "");
             initial.put("totalSteps", 0);
             initial.put("todaySteps", 0);
             initial.put("lastSummary", "");
-            initial.put("next", "先做一版咖啡广告页的新配色，验证暖色绘本风");
+            initial.put("next", "为今日菜单增加冷热筛选");
             initial.put("milestones", new ArrayList<>());
             initial.put("lastAt", null);
             writeState(initial);
         }
+    }
+
+    @org.springframework.context.event.EventListener(org.springframework.boot.context.event.ApplicationReadyEvent.class)
+    public void showSavedMenu() throws Exception {
+        Path entry = workspace.resolve("artifacts/index.html");
+        publisher.publishEvent(new ProjectWorkEvent("小橘咖啡 · 今日菜单", "artifacts/index.html",
+                new String(Files.readAllBytes(entry), StandardCharsets.UTF_8), "今日菜单已打开"));
     }
 
     public synchronized Map<String, Object> status() {
@@ -180,8 +203,7 @@ public class BackgroundAgentService {
         status.put("working", true);
         try {
             Map<String, Object> state = readState();
-            List<String> files = listFiles();
-            List<Map<String, Object>> journal = recentJournal();
+            String source = new String(Files.readAllBytes(workspace.resolve("artifacts/index.html")), StandardCharsets.UTF_8);
             String brief = readBrief();
 
             Map<String, Object> progress = new LinkedHashMap<>();
@@ -192,8 +214,7 @@ public class BackgroundAgentService {
             Map<String, Object> context = new LinkedHashMap<>();
             context.put("项目说明", brief);
             context.put("当前进度", progress);
-            context.put("已有文件", files);
-            context.put("最近日志", journal);
+            context.put("当前页面源码", source);
             context.put("今天已工作步数", number(state.get("todaySteps")));
 
             ChatResult result = deepSeek.chat("background", "上班产出", prompt(), toJson(context),
@@ -218,7 +239,7 @@ public class BackgroundAgentService {
                 String path = data.path("path").asText("");
                 String content = data.path("content").asText("");
                 Path target = resolveArtifact(path);
-                if (target == null || content.trim().isEmpty()
+                if (!"artifacts/index.html".equals(path) || target == null || content.trim().isEmpty()
                         || content.getBytes(StandardCharsets.UTF_8).length > MAX_BYTES) {
                     status.put("state", "error");
                     status.put("lastError", "invalid_path_or_content");

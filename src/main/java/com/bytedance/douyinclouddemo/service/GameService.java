@@ -75,7 +75,9 @@ public class GameService {
         next.getStats().put("likes", 0);
         next.getStats().put("games", 0);
         Snippet work = workScreenSnippet(at);
+        work.setId("starter-coffee-page");
         work.setTitle("咖啡广告页 2.0");
+        work.setHtml(assets.screen("ad"));
         next.setSnippet(work);
         next.setProjectSnippet(work);
         Map<String, Object> project = new LinkedHashMap<>();

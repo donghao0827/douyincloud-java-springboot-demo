@@ -104,7 +104,7 @@ public class GameApiController {
             @RequestBody Map<String, Object> body) {
         if (!operatorAllowed(token)) return unauthorized();
         if (!(body.get("paused") instanceof Boolean)) return ResponseEntity.badRequest().build();
-        return saveSettings((Boolean) body.get("paused"), null, null);
+        return saveSettings((Boolean) body.get("paused"), null, null, null, null);
     }
 
     @PostMapping("/api/agent/step")
@@ -124,7 +124,7 @@ public class GameApiController {
             @RequestBody Map<String,Object> body) {
         if (!operatorAllowed(token)) return unauthorized();
         if (!(body.get("start") instanceof Boolean)) return ResponseEntity.badRequest().build();
-        return saveSettings(null,(Boolean) body.get("start"),null);
+        return saveSettings(null,(Boolean) body.get("start"),null,null,null);
     }
 
     @PostMapping("/api/agent/interval")
@@ -134,7 +134,21 @@ public class GameApiController {
         if (!operatorAllowed(token)) return unauthorized();
         Object seconds = body.get("tickSeconds");
         if (!Arrays.asList(300,900,1800).contains(seconds)) return ResponseEntity.badRequest().build();
-        return saveSettings(null,null,(Integer) seconds);
+        return saveSettings(null,null,(Integer) seconds,null,null);
+    }
+
+    @PostMapping("/api/agent/hours")
+    public ResponseEntity<Map<String,Object>> hours(
+            @RequestHeader(value="X-Kapu-Token", required=false) String token,
+            @RequestBody Map<String,Object> body) {
+        if (!operatorAllowed(token)) return unauthorized();
+        String start = String.valueOf(body.get("start"));
+        String end = String.valueOf(body.get("end"));
+        String time = "(?:[01][0-9]|2[0-3]):[0-5][0-9]";
+        if (!start.matches(time) || !end.matches(time) || start.equals(end)) {
+            return ResponseEntity.badRequest().body(java.util.Collections.singletonMap("error", "invalid-hours"));
+        }
+        return saveSettings(null, null, null, start, end);
     }
 
     private boolean operatorAllowed(String token) {
@@ -143,9 +157,9 @@ public class GameApiController {
         return token != null && token.equals(required);
     }
 
-    private ResponseEntity<Map<String,Object>> saveSettings(Boolean paused, Boolean enabled, Integer seconds) {
+    private ResponseEntity<Map<String,Object>> saveSettings(Boolean paused, Boolean enabled, Integer seconds, String start, String end) {
         try {
-            Map<String,Object> result = background.updateSettings(paused,enabled,seconds);
+            Map<String,Object> result = background.updateSettings(paused,enabled,seconds,start,end);
             sse.broadcast();
             return ResponseEntity.ok(result);
         } catch (java.io.IOException e) {

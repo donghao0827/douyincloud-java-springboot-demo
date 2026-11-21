@@ -50,6 +50,7 @@ public class BackgroundAgentService {
     private final Map<String, Object> status = Collections.synchronizedMap(new LinkedHashMap<>());
     private volatile boolean autoEnabled;
     private volatile int tickSeconds;
+    private String workStart, workEnd;
     private Path settingsFile;
     private volatile long lastTick = 0;
     private Path workspace;
@@ -67,12 +68,16 @@ public class BackgroundAgentService {
         workspace = Paths.get(props.getWorkspace()).toAbsolutePath().normalize();
         autoEnabled = props.isBackgroundEnabled();
         tickSeconds = Math.max(60, props.getTickSeconds());
+        workStart = props.getWorkStart();
+        workEnd = props.getWorkEnd();
         settingsFile = Paths.get(props.getDataDir()).resolve("agent-settings.json");
         if (Files.exists(settingsFile)) {
             try {
                 JsonNode saved = mapper.readTree(settingsFile.toFile());
                 autoEnabled = saved.path("autoEnabled").asBoolean(autoEnabled);
                 tickSeconds = Math.max(60,saved.path("tickSeconds").asInt(tickSeconds));
+                workStart = saved.path("workStart").asText(workStart);
+                workEnd = saved.path("workEnd").asText(workEnd);
                 gate.setPaused(saved.path("paused").asBoolean(gate.isPaused()));
             } catch (Exception e) {
                 throw new IllegalStateException("无法读取主播设置", e);
@@ -124,14 +129,14 @@ public class BackgroundAgentService {
         }
     }
 
-    public Map<String, Object> status() {
+    public synchronized Map<String, Object> status() {
         Map<String, Object> map;
         synchronized (status) { map = new LinkedHashMap<>(status); }
         map.put("autoEnabled", autoEnabled);
         map.put("busy", busy.get());
         Map<String, Object> schedule = new LinkedHashMap<>();
-        schedule.put("start", props.getWorkStart());
-        schedule.put("end", props.getWorkEnd());
+        schedule.put("start", workStart);
+        schedule.put("end", workEnd);
         List<Integer> days = new ArrayList<>();
         for (String part : (props.getWorkDays() == null ? "1,2,3,4,5,6,7" : props.getWorkDays()).split(",")) {
             try {
@@ -272,12 +277,14 @@ public class BackgroundAgentService {
         }
     }
 
-    public synchronized Map<String, Object> updateSettings(Boolean paused, Boolean enabled, Integer interval)
+    public synchronized Map<String, Object> updateSettings(Boolean paused, Boolean enabled, Integer interval, String start, String end)
             throws java.io.IOException {
         boolean nextPaused = paused == null ? gate.isPaused() : paused;
         boolean nextEnabled = enabled == null ? autoEnabled : enabled;
         int nextInterval = interval == null ? tickSeconds : interval;
         Map<String,Object> values = new LinkedHashMap<>();
+        values.put("workStart", start == null ? workStart : start);
+        values.put("workEnd", end == null ? workEnd : end);
         values.put("paused", nextPaused);
         values.put("autoEnabled", nextEnabled);
         values.put("tickSeconds", nextInterval);
@@ -291,6 +298,8 @@ public class BackgroundAgentService {
         }
         gate.setPaused(nextPaused);
         autoEnabled = nextEnabled;
+        workStart = (String) values.get("workStart");
+        workEnd = (String) values.get("workEnd");
         tickSeconds = nextInterval;
         Map<String,Object> response = result(true, null);
         response.putAll(values);
@@ -306,7 +315,7 @@ public class BackgroundAgentService {
         }
     }
 
-    private boolean isWorkTime() {
+    private synchronized boolean isWorkTime() {
         ZonedDateTime now = ZonedDateTime.now(SHANGHAI);
         int weekday = now.getDayOfWeek().getValue();
         String days = props.getWorkDays() == null ? "1,2,3,4,5,6,7" : props.getWorkDays();
@@ -318,8 +327,8 @@ public class BackgroundAgentService {
             }
         }
         if (!allowed) return false;
-        int start = parseMinutes(props.getWorkStart(), 9 * 60);
-        int end = parseMinutes(props.getWorkEnd(), 18 * 60);
+        int start = parseMinutes(workStart, 9 * 60);
+        int end = parseMinutes(workEnd, 18 * 60);
         int minute = now.getHour() * 60 + now.getMinute();
         if (start <= end) return minute >= start && minute < end;
         return minute >= start || minute < end;

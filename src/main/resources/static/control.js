@@ -95,7 +95,7 @@ function authHeader() {
   return token ? { "X-Kapu-Token": token } : {};
 }
 
-async function post(path, body) {
+async function post(path, body, feedbackId = "controlMessage") {
   try {
     const response = await fetch(path, {
       method: "POST",
@@ -113,7 +113,7 @@ async function post(path, body) {
   } catch (error) {
     console.error("[control]", path, error);
     const message = String(error.message || "请求失败");
-    const el = get("controlMessage");
+    const el = get(feedbackId);
     if (el) el.textContent = `请求失败：${message}`;
     return null;
   }
@@ -484,17 +484,13 @@ async function runWorkStep() {
   button.disabled = true;
   button.textContent = "干活中…";
   try {
-    const response = await fetch("/api/agent/step", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ force: true }),
-    });
-    const data = await response.json();
-    if (data.error) get("workNote").textContent = `这一步没成：${data.error}`;
-    else if (data.file) get("workNote").textContent = `产出：${data.file}`;
-    else if (data.skipped) get("workNote").textContent = `跳过：${data.skipped}`;
+    const data = await post("/api/agent/step", { force: true }, "agentMessage");
+    if (!data) return;
+    if (data.error) get("agentMessage").textContent = `这一步没成：${data.error}`;
+    else if (data.file) get("agentMessage").textContent = `产出：${data.file}`;
+    else if (data.skipped) get("agentMessage").textContent = `跳过：${data.skipped}`;
   } catch (error) {
-    get("workNote").textContent = `触发失败：${error.message}`;
+    get("agentMessage").textContent = `触发失败：${error.message}`;
   } finally {
     button.disabled = false;
     button.textContent = "立即干一步";
@@ -503,29 +499,15 @@ async function runWorkStep() {
 }
 
 async function toggleAiPause() {
-  const paused = !(lastState?.ai?.paused);
-  try {
-    await fetch("/api/ai/pause", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ paused }),
-    });
-  } catch (error) {
-    get("workNote").textContent = `切换 AI 失败：${error.message}`;
-  }
+  const paused = !lastState?.ai?.paused;
+  const data = await post("/api/ai/pause", { paused }, "agentMessage");
+  if (data) get("agentMessage").textContent = paused ? "AI 调用已暂停" : "AI 调用已恢复";
 }
 
 async function toggleWorkAgent() {
-  const start = !(lastState?.ai?.background?.state === "on");
-  try {
-    await fetch("/api/agent/toggle", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ start }),
-    });
-  } catch (error) {
-    get("workNote").textContent = `切换失败：${error.message}`;
-  }
+  const start = lastState?.ai?.background?.state !== "on";
+  const data = await post("/api/agent/toggle", { start }, "agentMessage");
+  if (data) get("agentMessage").textContent = start ? "已启动常驻 agent" : "已停止常驻 agent";
 }
 
 /* ------------------------- 启动 ------------------------- */

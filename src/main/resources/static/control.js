@@ -239,13 +239,13 @@ function resultNote(result) {
 
 function renderVotes(state) {
   const inspection = state.phase === "caught";
-  const labels = inspection ? ["扣薪", "求情"] : ["提醒收手", "再玩五秒"];
+  const labels = state.phase === "boss" ? ["继续写","喝咖啡"] : inspection ? ["扣薪", "求情"] : ["提醒收手", "再玩五秒"];
   for (const btn of document.querySelectorAll("[data-command]")) {
     const option = Number(btn.dataset.command);
     if (option === 1 || option === 2) btn.textContent = `评论 ${option}：${labels[option - 1]}`;
   }
   const total = state.votes[1] + state.votes[2];
-  get("voteNote").textContent = inspection ? `查岗表决：扣 1 颗小橘或免扣 · 剩 ${state.timeLeft} 秒` : state.phase === "play"
+  get("voteNote").textContent = state.phase === "boss" ? "真人老板请开麦听取建议，再点击决定" : inspection ? `查岗表决：扣 1 颗小橘或免扣 · 剩 ${state.timeLeft} 秒` : state.phase === "play"
     ? `第 ${state.round} 轮 · 还剩 ${state.timeLeft} 秒${state.extended ? " · 已延长 5 秒" : ""}`
     : state.phase === "pickup"
       ? "卡噗已拿起掌机，摸鱼投票已开始。"

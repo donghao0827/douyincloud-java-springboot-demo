@@ -37,10 +37,14 @@
         <p class="note">主播手动推进整局；观众互动走下面的模拟器。</p>
         <label class="field"><span>主播口令（API_TOKEN，可选）</span><input id="apiToken" type="password" placeholder="服务端设置 API_TOKEN 时填写" /></label>
         <div class="row">
+          <button data-control="boss-enter">真人老板进工位</button>
+          <button data-control="boss-work">老板决定：继续写</button>
+          <button data-control="boss-coffee">老板决定：请喝咖啡</button>
           <button class="primary" data-control="play">开始摸鱼</button>
           <button data-control="resolve">立即结算</button>
           <button data-control="inspect">触发查岗</button>
           <button data-control="preview">展示作品</button>
+          <button data-control="speak">试说三秒</button>
           <button data-control="avatar">画头像</button>
           <button data-control="pause" id="pauseButton">暂停倒计时</button>
           <button class="danger" data-control="reset">重置整局</button>
@@ -70,7 +74,7 @@
         </div>
         <div class="row">
           <button data-gift="coffee">礼物：咖啡</button>
-          <button data-gift="keyboard">礼物：机械键盘</button>
+          <button data-gift="keyboard">机械键盘 · 双倍打字 10 秒</button>
           <button data-gift="monitor">礼物：显示器</button>
           <button data-gift="vacation">礼物：带薪假</button>
         </div>

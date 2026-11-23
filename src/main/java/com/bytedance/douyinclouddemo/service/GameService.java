@@ -12,6 +12,8 @@ import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 public class GameService {
+    private long typingBoostUntil;
+    private long speakingUntil;
     private static final ZoneId SHANGHAI = ZoneId.of("Asia/Shanghai");
     private static final int PLAY_SECONDS = 8;
     private static final int EXTEND_SECONDS = 5;
@@ -26,6 +28,9 @@ public class GameService {
 
     static {
         phase("work", "认真上班", 0);
+        phase("boss", "真人老板征询意见", 45000);
+        phase("bosswork", "老板决定继续写代码", 2500);
+        phase("inspect", "老板巡视工位", 3000);
         phase("pickup", "悄悄拿掌机", 1000);
         phase("play", "偷偷摸鱼", 8000);
         phase("hide", "快藏起来", 1000);
@@ -287,13 +292,13 @@ public class GameService {
 
     public synchronized Map<String, Object> vote(String playerName, int choice) {
         if (choice != 1 && choice != 2) return result(false, "invalid-vote");
-        if (!"play".equals(state.getPhase()) && !"caught".equals(state.getPhase())) return result(false, "vote-closed");
+        if (!"play".equals(state.getPhase()) && !"caught".equals(state.getPhase()) && !"boss".equals(state.getPhase())) return result(false, "vote-closed");
         if (state.isPaused()) return result(false, "vote-closed");
         if (state.getVoteDeadline() != null && System.currentTimeMillis() >= state.getVoteDeadline()) return result(false, "vote-closed");
 
         Player player = getPlayer(playerName);
         Integer previous = state.getVoters().get(player.getName());
-        String label = "caught".equals(state.getPhase())
+        String label = "boss".equals(state.getPhase()) ? (choice == 1 ? "继续写" : "喝咖啡") : "caught".equals(state.getPhase())
                 ? (choice == 1 ? "扣薪" : "求情") : (choice == 1 ? "收手" : "再玩");
         if (previous != null && previous == choice) {
             addFeed("vote", "坚持选 " + choice + "（" + label + "）", player.getName());
@@ -433,7 +438,8 @@ public class GameService {
             state.setRisk(Math.max(0, state.getRisk() - 15));
             addFeed("gift", "送来咖啡，摸鱼值 -15，小橘 +1", player.getName());
         } else if ("keyboard".equals(gift)) {
-            addFeed("gift", "送来机械键盘，小橘 +5", player.getName());
+            typingBoostUntil = System.currentTimeMillis() + 10000L;
+            addFeed("gift", "机械键盘补给：工作时双倍打字 10 秒，小橘 +5", player.getName());
         } else if ("monitor".equals(gift)) {
             if ("play".equals(state.getPhase()) && state.getVoteDeadline() != null) {
                 state.setVoteDeadline(state.getVoteDeadline() + 5000);
@@ -531,7 +537,7 @@ public class GameService {
             openVote();
         } else if ("play".equals(state.getPhase()) && state.getVoteDeadline() != null && at >= state.getVoteDeadline()) {
             resolveVote(false);
-        } else if (Arrays.asList("hide", "caught", "coffee", "preview", "avatar").contains(state.getPhase())
+        } else if (Arrays.asList("boss", "bosswork", "inspect", "hide", "caught", "coffee", "preview", "avatar").contains(state.getPhase())
                 && state.getPhaseEndsAt() != null && at >= state.getPhaseEndsAt()) {
             boolean wasCaught = "caught".equals(state.getPhase());
             if (wasCaught) settleInspection();
@@ -544,6 +550,28 @@ public class GameService {
     }
 
     public synchronized Map<String, Object> control(String action) {
+        if ("boss-enter".equals(action)) {
+            if (state.isPaused() || !"work".equals(state.getPhase())) return result(false, "phase:" + state.getPhase());
+            state.setVotes(votes(0, 0));
+            state.getVoters().clear();
+            state.setLastResult(null);
+            setPhase("boss", 45000);
+            state.setVoteDeadline(state.getPhaseEndsAt());
+            addFeed("system", "真人老板进工位：继续写，还是喝杯咖啡？", "");
+            return result(true, null);
+        }
+        if ("boss-work".equals(action) || "boss-coffee".equals(action)) {
+            if (state.isPaused() || !"boss".equals(state.getPhase()) || System.currentTimeMillis() >= state.getPhaseEndsAt())
+                return result(false, "phase:" + state.getPhase());
+            boolean coffee = "boss-coffee".equals(action);
+            setPhase(coffee ? "coffee" : "bosswork", coffee ? 3200 : 2500);
+            addFeed("system", coffee ? "真人老板决定：请卡噗喝咖啡" : "真人老板决定：继续写代码", "");
+            return result(true, null);
+        }
+        if ("speak".equals(action) || "stop-speaking".equals(action)) {
+            speakingUntil = "speak".equals(action) ? System.currentTimeMillis() + 3000L : 0;
+            return result(true, null);
+        }
         if ("play".equals(action)) return beginPlay();
         if ("finish".equals(action)) return finishPlay("主播喊停");
         if ("resolve".equals(action)) {
@@ -554,8 +582,9 @@ public class GameService {
             return resolveVote(true);
         }
         if ("inspect".equals(action)) {
-            if ("play".equals(state.getPhase()) || "pickup".equals(state.getPhase())) finishPlay("查岗");
-            caught("主播触发查岗");
+            if ("play".equals(state.getPhase()) || "pickup".equals(state.getPhase())) caught("主播触发查岗");
+            else if ("work".equals(state.getPhase())) setPhase("inspect", 3000);
+            else return result(false, "phase:" + state.getPhase());
             return result(true, null);
         }
         if ("preview".equals(action)) {
@@ -573,6 +602,8 @@ public class GameService {
             return result(true, null);
         }
         if ("reset".equals(action)) {
+            speakingUntil = 0;
+            typingBoostUntil = 0;
             state = fresh();
             return result(true, null);
         }
@@ -610,6 +641,8 @@ public class GameService {
         map.put("phaseLabel", state.getPhaseLabel());
         map.put("timeLeft", timeLeft);
         map.put("paused", state.isPaused());
+        map.put("speakingMs", Math.max(0L, speakingUntil - System.currentTimeMillis()));
+        map.put("typingBoostMs", Math.max(0L, typingBoostUntil - System.currentTimeMillis()));
         map.put("round", state.getRound());
         map.put("salary", Math.round(payrollSummary.getActual() * 100));
         map.put("payroll", payrollSummary);
